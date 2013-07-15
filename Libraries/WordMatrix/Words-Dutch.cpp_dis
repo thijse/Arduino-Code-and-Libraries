@@ -1,0 +1,338 @@
+/*
+  Copyright (c) Thijs Elenbaas 2012
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA  
+*/
+
+#include "stdafx.h"
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+#include <Time.h>    
+
+#include "Words-Dutch.h"
+
+using namespace std;
+
+enum wordNames { 
+	HET,
+	IS,
+	VIJF,
+	TIEN,
+	VOOR,
+	OVER,
+	KWART,
+	HALF,
+	OVER2,
+	VOOR2,
+	uEEN,
+	uTWEE,
+	uDRIE,
+	uVIER,
+	uVIJF,
+	uZES,
+	uZEVEN,
+	uNEGEN,
+	uACHT,
+	uTIEN,
+	uELF,
+	uTWAALF,
+	UUR,
+	PLUSEEN,
+	PLUSTWEE,
+	PLUSDRIE,
+	PLUSVIER,
+};
+
+
+const unsigned char ClockWords[][3] = {
+	{0,  0,  3}, // HET		
+	{4,  0,  2}, // IS
+	{7,  0,  4}, // VIJF
+	{0,  1,  4}, // TIEN
+	{7,  1,  4}, // VOOR
+	{0,  2,  4}, // OVER
+	{6,  2,  5}, // KWART
+	{0,  3,  3}, // HALF
+	{7,  3,  4}, // OVER2
+	{0,  4,  4}, // VOOR2
+	{7,  4,  3}, // EEN
+	{0,  5,  4}, // TWEE
+	{7,  5,  4}, // DRIE
+	{0,  6,  4}, // VIER
+	{4,  6,  4}, // VIJF
+	{8,  6,  3}, // ZES
+	{0,  7,  5}, // ZEVEN
+	{6,  7,  5}, // NEGEN
+	{0,  8,  4}, // ACHT
+	{4,  8,  4}, // TIEN
+	{8,  8,  3}, // ELF
+	{0,  9,  5}, // TWAALF
+	{8,  9,  3}, // UUR
+	{0,  10,  1}, // plus 1 minute
+	{0,  10,  2}, // plus 2 minutes
+	{0,  10,  3}, // plus 3 minutes
+	{0,  10,  4}  // plus 4 minutes
+
+};
+
+TimeToWords::TimeToWords(GenerateMatrix *matrix) 
+{
+	_matrix = matrix;
+}
+
+void inline TimeToWords::ItIs() 
+{
+	_matrix->setWord(ClockWords[HET]);
+	_matrix->setWord(ClockWords[IS]);
+}
+
+void inline TimeToWords::Min0()
+{	
+	_matrix->setWord(ClockWords[UUR]);
+}
+
+void inline TimeToWords::Min5()
+{
+	_matrix->setWord(ClockWords[VIJF]);
+	_matrix->setWord(ClockWords[OVER]);
+}
+
+void inline TimeToWords::Min10()
+{
+	_matrix->setWord(ClockWords[TIEN]);
+	_matrix->setWord(ClockWords[OVER]);
+}
+
+void inline TimeToWords::Min15()
+{
+	_matrix->setWord(ClockWords[KWART]);
+	_matrix->setWord(ClockWords[OVER2]);
+}
+
+void inline TimeToWords::Min20()
+{
+	_matrix->setWord(ClockWords[TIEN]);
+	_matrix->setWord(ClockWords[VOOR]);
+	_matrix->setWord(ClockWords[HALF]);
+}
+
+void inline TimeToWords::Min25()
+{
+	_matrix->setWord(ClockWords[VIJF]);
+	_matrix->setWord(ClockWords[VOOR]);
+	_matrix->setWord(ClockWords[HALF]);
+}
+
+void TimeToWords::Min30()
+{
+	_matrix->setWord(ClockWords[HALF]);
+}
+
+void inline TimeToWords::Min35()
+{
+	_matrix->setWord(ClockWords[VIJF]);
+	_matrix->setWord(ClockWords[OVER]);
+	_matrix->setWord(ClockWords[HALF]);
+}
+
+void inline TimeToWords::Min40()
+{
+	_matrix->setWord(ClockWords[TIEN]);
+	_matrix->setWord(ClockWords[OVER]);
+	_matrix->setWord(ClockWords[HALF]);
+}
+
+void inline TimeToWords::Min45()
+{
+	_matrix->setWord(ClockWords[KWART]);
+	_matrix->setWord(ClockWords[VOOR2]);
+}
+
+void inline TimeToWords::Min50()
+{
+	_matrix->setWord(ClockWords[TIEN]);
+	_matrix->setWord(ClockWords[VOOR]);
+}
+
+void inline TimeToWords::Min55()
+{
+	_matrix->setWord(ClockWords[VIJF]);
+	_matrix->setWord(ClockWords[VOOR]);
+}
+  
+// Hours
+void inline TimeToWords::Hour1()
+{
+	_matrix->setWord(ClockWords[uEEN]);
+}
+
+void inline TimeToWords::Hour2()
+{
+	_matrix->setWord(ClockWords[uTWEE]);
+}
+
+void inline TimeToWords::Hour3()
+{
+	_matrix->setWord(ClockWords[uDRIE]);
+}
+
+void inline TimeToWords::Hour4()
+{
+	_matrix->setWord(ClockWords[uVIER]);
+}
+
+void inline TimeToWords::Hour5()
+{
+	_matrix->setWord(ClockWords[uVIJF]);
+}
+
+void inline TimeToWords::Hour6()
+{
+	_matrix->setWord(ClockWords[uZES]);
+}
+
+void inline TimeToWords::Hour7()
+{
+	_matrix->setWord(ClockWords[uZEVEN]);
+}
+
+void inline TimeToWords::Hour8()
+{
+	_matrix->setWord(ClockWords[uACHT]);
+}
+
+void inline TimeToWords::Hour9()
+{
+	_matrix->setWord(ClockWords[uNEGEN]);
+}
+
+void inline TimeToWords::Hour10()
+{
+	_matrix->setWord(ClockWords[uTIEN]);
+}
+
+void inline TimeToWords::Hour11()
+{
+	_matrix->setWord(ClockWords[uELF]);
+}
+
+void inline TimeToWords::Hour12()
+{
+	_matrix->setWord(ClockWords[uTWAALF]);
+}
+
+void inline TimeToWords::Plus1()
+{
+	_matrix->setWord(ClockWords[PLUSEEN]);
+}
+
+void inline TimeToWords::Plus2()
+{
+	_matrix->setWord(ClockWords[PLUSTWEE]);
+}
+
+void inline TimeToWords::Plus3()
+{
+	_matrix->setWord(ClockWords[PLUSDRIE]);
+}
+
+void inline TimeToWords::Plus4()
+{
+	_matrix->setWord(ClockWords[PLUSVIER]);
+}
+
+void TimeToWords::SetTime(time_t time)
+{
+	struct tm * timeinfo = localtime ( &time );
+	int min     = timeinfo->tm_min % 5;
+	int minDiv5 = timeinfo->tm_min / 5;
+	int hour    = timeinfo->tm_hour > 12 ? timeinfo->tm_hour -12 : timeinfo->tm_hour;
+
+	// It is ..
+	ItIs();
+	
+	// 5 minute intervals
+	switch ( minDiv5 ) {
+		case 0 : 
+			Min0(); break;
+		case 1 : 
+			Min5(); break;
+		case 2 : 
+			Min10(); break;
+		case 3 : 
+			Min15(); break;
+		case 4 : 
+			Min20(); break;
+		case 5 : 
+			Min25(); break;
+		case 6 : 
+			Min30(); break;
+		case 7 : 
+			Min35(); break;
+		case 8 : 
+			Min40(); break;
+		case 9 : 
+			Min45(); break;
+		case 10 : 
+			Min50(); break;
+		case 11 : 
+			Min55(); break;
+	}
+
+	// Plus minutes indicators
+	switch ( min ) {
+		case 0 : 
+			break;
+		case 1 : 
+			Plus1(); break;
+		case 2 : 
+			Plus2(); break;
+		case 3 : 
+			Plus3(); break;
+		case 4 : 
+			Plus4(); break;
+	}
+
+	// hours
+	switch ( hour ) {
+		case 1 : 
+			Hour1(); break;
+		case 2 : 
+			Hour2(); break;
+		case 3 : 
+			Hour3(); break;
+		case 4 : 
+			Hour4(); break;
+		case 5 :  
+			Hour5(); break;
+		case 6 : 
+			Hour6(); break;
+		case 7 : 
+			Hour7(); break;
+		case 8 : 
+			Hour8(); break;
+		case 9 :  
+			Hour9(); break;
+		case 10 : 
+			Hour10(); break;
+		case 11 : 
+			Hour11(); break;
+		case 12 : 
+			Hour12(); break;
+	}
+
+}

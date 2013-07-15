@@ -1,0 +1,93 @@
+This is an Arduino Library.  For more information see see: http://arduino.cc/en/Guide/Environment#libraries
+
+Quick Installation instructions:
+ * Create a new directory in your sketchbook directory called "libraries"
+ * Create a directory below that called "lightuino5"
+ * Copy all files in this package into there.
+ * Restart the Arduino IDE.
+
+Linux Example:
+
+mkdir ~/sketchbook/libraries
+cd ~/sketchbook/libraries
+unzip lightuino5.?.zip -d ~/sketchbook/libraries
+
+
+Installing the USB:
+
+
+Windows:
+
+Install the Lightuino "driver".  I actually use the standard usbser.sys driver that ships with windows.  There is a .inf file in this directory that you should give to windows during the driver install process.  Ignore the "driver signing" warning... since I am not even providing a driver, this is just silliness designed to make M$ more money!
+
+Linux:
+
+There is nothing to do!  The Lightuino shows up as /dev/ttyACMx.  If you do not see this in the Arduino IDE, please upgrade it to version 21 or greater.
+
+
+Tell Arduino IDE about the Lightuino board:
+
+To use the Lightuino USB, you need to add an entry in the boards.txt file, located at: <arduino_install_dir>/hardware/arduino/boards.txt.  Or possibly in /usr/local/arduino/hardware/arduino/boards.txt.
+
+Here is an example for the Lightuino 16 and 20mhz board (cut and paste this at the top of your boards.txt file):
+
+lightuino5_16.name=lightuino 5 16mhz
+lightuino5_16.upload.protocol=stk500
+lightuino5_16.upload.maximum_size=32768
+lightuino5_16.upload.speed=19200
+
+lightuino5_16.bootloader.low_fuses=0xFF
+lightuino5_16.bootloader.high_fuses=0xDA
+lightuino5_16.bootloader.extended_fuses=0x05
+lightuino5_16.bootloader.path=atmega
+lightuino5_16.bootloader.file=ATmegaBOOT_168_atmega328.hex
+lightuino5_16.bootloader.unlock_bits=0x3F
+lightuino5_16.bootloader.lock_bits=0x0F
+
+lightuino5_16.build.mcu=atmega328p
+lightuino5_16.build.f_cpu=16000000L
+lightuino5_16.build.core=arduino
+lightuino5_16.build.variant=eightanaloginputs
+
+##############################################################
+
+
+lightuino5_20.name=lightuino 5 20mhz
+lightuino5_20.upload.protocol=stk500
+lightuino5_20.upload.maximum_size=32768
+lightuino5_20.upload.speed=19200
+
+lightuino5_20.bootloader.low_fuses=0xFF
+lightuino5_20.bootloader.high_fuses=0xDA
+lightuino5_20.bootloader.extended_fuses=0x05
+lightuino5_20.bootloader.path=atmega
+lightuino5_20.bootloader.file=ATmegaBOOT_168_atmega328.hex
+lightuino5_20.bootloader.unlock_bits=0x3F
+lightuino5_20.bootloader.lock_bits=0x0F
+
+lightuino5_20.build.mcu=atmega328p
+lightuino5_20.build.f_cpu=20000000L
+lightuino5_20.build.core=arduino
+lightuino5_20.build.variant=eightanaloginputs
+
+##############################################################
+
+Using the Lightuino shield with the Arduino Mega
+
+The library has been ported to the Mega 2560, with some caveats.
+The Lightuino shield has no USB, so delete any references to the "Usb"
+global variable (generally used to print) you find in the example
+sketches.
+
+Currently, the PORTA pins (digital IOs 22 to 29) are supported.  So you'll
+have to remove the default pin selection solder blobs on the bottom of the
+board, and add jumper wires to get you to PORTA.
+
+Its pretty easy to switch the Lightuino libraries to use another set of 
+digital IOs, so long as they are in the same PORT register.  Search the forums
+or post on it for details.
+
+
+That's it!  Good luck!
+
+

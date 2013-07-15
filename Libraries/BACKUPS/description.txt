@@ -1,0 +1,102 @@
+Hi Andrew,
+
+I decided to take a stab at optimizing the code myself and discovered that the fastSetBy32 is indeed not that slow at all,  especially the inner loop is quite fast. I did some speed tests on the animated matrix code, specifically the animatedLoop code:
+
+void lightuinoAnimatedMatrix::animatedLoop()
+{  
+	....
+	curRow++;
+	// At end of all lines (sources) of image..
+	if (curRow >= startRow+numRows) {
+		// Set first startline
+		curRow=startRow;
+		// Determine which image should be shown
+		videoRamUsed = frameToShow() ?  videoRamNext: videoRamCurrent;		
+	}
+	     
+	sink.set(videoRamUsed + (curRow*NUMOUTSDIV8ADD1)); 
+    sink.finish();	
+	src.shift((curRow ==startRow) ? 1: 0);
+	...
+}
+
+The performance difference of the static loop (198.7 micros, 4.9 kHz) and the animated loop (201.0 micros, 5.0 kHz) is quite small. Codewise the difference is the Pwm switching logic, and a separate test indeed shows that the Pwm code (mostly in the frameToShow show function) does not contribute much (7.5 micros). The src.shift is also fairly lightweight (4.3 micros). The performance costs are clearly in the sink.set function (191.5 micros).
+
+Next had little stab at optimizing the sink class. The mayor speed increase came from changing the DigitalWrite to fastDigitalWrite (approx. 35 micros), the rest of the speed increase was due to using constants, moving the lookuptable creation out of fastSetBy32 function, loop-unrolling etc. Inlining the Source.Shift code in the AnimatedMatrix class improved speed, but strangely enough, inlining of the Sink.Set code did not. 
+
+All-in-all I was able to get the total loop time down to 92.8 micros, so I passed the 10 kHz mark! The animations are not perfect, but notably smoother (see movie).
+
+
+
+
+
+al kinds oi the switching logic between the safeSet functions, used, fastSet and fastSetBy32 functions. This was more to make the code more easy to read for myself, but unexpectedly it also improved performance by a bit. I expect that the compiler could optimize the code better. The class now uses the fastSetBy32 function everywhere. (code is in Lightuino5\Sinks\sink1.cpp ). 
+
+Next I used constant pointer for the pin functions. This was meant as a preparation for implementing fastSink, but again it already improved performance by a bit.(code is in Lightuino5\Sinks\sink2.cpp )
+
+Next I tried (again) implementing the fastPin functions. This really made a difference. All in all we have now halved the cost of the sink function. As I understand setting a digital pin is now done in a single clock cycle. Unfortunately, the timing issues I saw the last time I tried optimizing this are back. I'm seeing the "bleeding" again, but it only seems to happen the second M5451. I believe/hope that a well placed delay somewhere may resolve this. I changed the constructor back so that it uses the safeSet functions again, but with no result. (code is in Lightuino5\Sinks\sink3.cpp )
+
+I was curious if the remaining performance cost was now all in the digital write functions, so I started stripping away code to see what would happen. Surprisingly about half of the cost is in data manipulation, and in particular in the bit shifting code (are these lookup indices?) in the inner loop of fastSetBy32:
+
+  for (i=0;i<32;i+=2)
+  {
+    uint8_t lkup = (a[0]&1)+((b[0]&1)<<1);    
+    ....
+    lkup = ((a[0]&2)>>1)+(b[0]&2);
+    
+	...
+    a[0]>>=2; b[0]>>=2;   
+  }
+  
+  for (i=0;i<M5451_NUMOUTS-32;i++)
+  {
+    uint8_t lkup = (a[1]&1)+((b[1]&1)<<1);    
+    a[1]>>=1; b[1]>>=1;    
+    ...
+  }
+  
+  
+(code is in Lightuino5\Sinks\sink4.cpp.It gives nosensical results, interesting from timing performance standpoint). After removing the bit shifting code from lkup, the fastSetBy32 dropped from 1100 to 400. I find this a big difference especially for low cost operations as bitshifts and logical ANDs. I am a little concerned that I either broke too much or that the compiler has optimized code away. To counter the second option I included a lkup++ to force it to be non-constant but the difference remained. 
+If these measurements are correct, and we could get the fastPin functions to work correctly, the total performance of the animatedLoop would be 5x as high. Since we have a limited number of sink sequences that we use (at maximum  NoOfSources*2) that we show many times (typically 1000s of times during an animation alone), could we not prepare and cache the data as a bitstream, through which we can walk with a single shift operator?
+
+http://bleaklow.com/2012/06/20/sensor_smoothing_and_optimised_maths_on_the_arduino.html
+http://oskarwicha.blogspot.nl/2011/08/source-code-optimization-tips-for-atmel.html
+http://rcarduino.blogspot.nl/2012/09/how-to-view-arduino-assembly.html
+http://www.engblaze.com/faster-code-fridays-understand-division-and-speed-of-operations/
+
+
+http://www.elcojacobs.com/using-shiftpwm-to-control-rgb-leds-with-arduino/
+http://waitingforbigo.com/category/optimization/
+http://oskarwicha.blogspot.nl/2011/08/source-code-optimization-tips-for-atmel.html
+
+I took some inspiration from that and was able to shave a little more of processing time. First I did an inventory:
+
+The loop function too 
+
+Hi Andrew,
+
+I decided to take a stab at optimizing the code myself and discovered that the fastSetBy32 is indeed not slow at all and especially the inner loop is quite fast. I did some speed tests on the animated matrix code, specifically the animatedLoop code:
+
+void lightuinoAnimatedMatrix::animatedLoop()
+{  
+    ....
+    curRow++;
+    // At end of all lines (sources) of image..
+    if (curRow >= startRow+numRows) {
+        // Set first startline
+        curRow=startRow;
+        // Determine which image should be shown
+        videoRamUsed = frameToShow() ?  videoRamNext: videoRamCurrent;        
+    }
+         
+    sink.set(videoRamUsed + (curRow*NUMOUTSDIV8ADD1));
+    sink.finish();    
+    src.shift((curRow ==startRow) ? 1: 0);
+    ...
+}
+
+The performance difference of the static loop (198.7 micros, 4.9 kHz) and the animatedLoop (201.0 micros, 5.0 kHz) is quite small. Codewise the difference is the Pwm switching logic, and a separate test indeed shows that the Pwm code (mostly in the frameToShow function) does not contribute much (7.5 micros). The src.shift is also fairly lightweight (4.3 micros). The performance costs are clearly in the sink.set function (191.5 micros).
+
+Next had little stab at optimizing the sink class. The mayor speed increase came from changing the DigitalWrite to fastDigitalWrite (approx. 35 micros), the rest of the speed increase was due to using constants, moving the lookuptable creation out of fastSetBy32 function, loop-unrolling etc. In-lining the Source.Shift code in the AnimatedMatrix class improved speed, but strangely enough, in-lining of the Sink.Set code did not.
+
+All-in-all, I was able to get the total loop time down to 92.8 micros, so I passed the 10 kHz mark! The animations are not perfect, but notably smoother (see movie).

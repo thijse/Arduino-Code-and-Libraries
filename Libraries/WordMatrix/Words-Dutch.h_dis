@@ -1,0 +1,51 @@
+
+#ifndef TIMETOWORDS_h
+#define TIMETOWORDS_h
+
+#include <Time.h>    
+#include "GenerateMatrix.h"
+
+class TimeToWords {
+private:
+	GenerateMatrix* _matrix;
+
+	void ItIs();
+	void Min0();
+	void Min5();
+	void Min10();
+	void Min15();
+	void Min20();
+	void Min25();
+	void Min30();
+	void Min35();
+	void Min40();
+	void Min45();
+	void Min50();
+	void Min55();
+
+	void Plus1();
+	void Plus2();
+	void Plus3();
+	void Plus4();
+
+	void Hour1();
+	void Hour2();
+	void Hour3();
+	void Hour4();
+	void Hour5();
+	void Hour6();
+	void Hour7();
+	void Hour8();
+	void Hour9();
+	void Hour10();
+	void Hour11();
+	void Hour12();
+
+public:	
+	// Public Functions
+	TimeToWords(GenerateMatrix *matrix); 
+	void SetTime(time_t time);
+
+};
+
+#endif

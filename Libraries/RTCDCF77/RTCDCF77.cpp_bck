@@ -1,0 +1,250 @@
+/*
+ * RTCDCF77.h - library for DS1307 RTC
+  
+  
+  Copyright (c) Michael Margolis 2009
+  Update Thijs Elenbaas 2013
+  
+  This library is intended to be uses with Arduino Time.h library functions
+
+  The library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  
+  30 Dec 2009 - Initial release
+  5 Sep 2011  - updated for Arduino 1.0
+  9 Mar 2013  - Added memory access, start & stop
+ */
+ 
+#include <Wire.h> 
+#include <TimeUtils.h>
+#include <MemIO.h>
+#include <DS1307DSRTC->h>
+#include <DCF77.h>
+#include <RTCDCF77.h>
+
+#define _RTCDCF77_VERSION 0_1_0 // software version of this library
+
+/**
+ * Constructor
+ */
+RTCDCF77::RTCDCF77(DS1307RTC* RTCClock, DCF77* DCFClock)
+{
+	DSRTC = RTCClock;
+	DCFC  = DCFClock;
+	
+	addrPreviousRefTime = DSRTC->RAM->getAddress(sizeof(time_t));
+	addrInterval        = DSRTC->RAM->getAddress(sizeof(time_t));
+	addrDrift           = DSRTC->RAM->getAddress(sizeof(long));
+	addrUpdates         = DSRTC->RAM->getAddress(sizeof(unsigned int));
+	
+	convert = new TimeUtils();  
+	initialize();
+}
+ 
+void RTCDCF77::initialize()   // Aquire data from buffer and convert to time_t
+{
+  retrieve();
+}
+ 
+/**
+ * Get time/date
+ */
+time_t RTCDCF77::getUncorrected()   // Aquire data from buffer and convert to time_t
+{
+  return(DSRTC->get());
+}
+
+void RTCDCF77::retrieve()
+{
+  DSRTC->RAM->readBlock<time_t>(addrPreviousRefTime, status.previousRefTime);	
+  DSRTC->RAM->readBlock<time_t>(addrInterval, status.Interval);	
+  DSRTC->RAM->readBlock<long>(addrDrift, status.Drift);	
+  DSRTC->RAM->readBlock<unsigned int>(addrUpdates, status.Updates);
+}
+
+void RTCDCF77::store()
+{
+  DSRTC->RAM->writeBlock<time_t>(addrPreviousRefTime, status.previousRefTime);	
+  DSRTC->RAM->writeBlock<time_t>(addrInterval, status.Interval);	
+  DSRTC->RAM->writeBlock<long>(addrDrift, status.Drift);	         
+  DSRTC->RAM->writeBlock<unsigned int>(addrUpdates, status.Updates);
+}
+
+/**
+ * Set new time/date
+ */
+void RTCDCF77::set(time_t curRefTime)
+{ 
+  // Set half time 
+  const time_t halfTime = 7 * 24 * 60 * 60; // 7 Days
+  const time_t maxInterval = 180 * 24 * 60 * 60; // 180 days
+  const time_t minInterval = 30; //12 * 60 * 60; // half a day
+  // Fetch current internal time
+  time_t curIntTime = DSRTC->get();
+
+  Serial.print("Updated time ");
+  printDateTime(curRefTime);
+
+  Serial.print("uncorr time before update ");
+  printDateTime(getUncorrected());
+
+  Serial.print("Corr time before update ");
+  printDateTime(get());
+  
+    Serial.print("current internal time ");
+  printDateTime((time_t)curIntTime);
+  
+  // Read new values 	
+  retrieve();
+  
+  // Drift 
+  long curDrift = curIntTime - curRefTime;   
+  time_t curInterval = curRefTime - status.previousRefTime;
+  
+  // if interval is too short with respect to 1 sec resolution 
+  // we will ignore it
+  if (curInterval < minInterval) { 
+		Serial.println("Time interval too short");
+ 		return;
+  }
+  
+  // Update internal time
+  DSRTC->set(curRefTime);
+  
+  // if interval is too long we will not use it for drift correction
+  useInterval = true;
+  if (curInterval > maxInterval) { 
+		Serial.println("Time interval since update too long.");
+		useInterval = false;
+  }
+  // if correction factor is too large we will also not use it for drift correction
+  double corrFactor = (double)curDrift/(double)curInterval;
+  if (corrFactor > 0.01) { 
+	    Serial.print("corrFact too large: ");
+		Serial.println(corrFactor,8);  
+		useInterval = false;
+  } 
+	
+  if (useInterval) {
+ 
+	  // Use exponential filtering to update new drift time
+	  // coeffient determined by halftime and duration of current and previous interval(s)
+	  double alpha = (double)halfTime/ (double)(curInterval + status.Interval);
+	  if (alpha>1.0) { alpha=1.0;}   
+	  Serial.print("alpha ");
+	  Serial.println(alpha);
+	  
+	  // If not yet accumulated up to halfTime we will just accumulate	  
+	   
+	  // Calculate filter averages 
+	  status.Drift           = alpha * (curDrift    + status.Drift);
+	  status.Interval        = alpha * (curInterval + status.Interval);
+	  status.Updates++;
+	    
+	  Serial.print("Drift ");
+	  Serial.println(status.Drift);
+	  
+	  Serial.print("Interval ");
+	  Serial.println(status.Interval);	  
+	   
+	  // Precalculate corrections to be used
+	  status.correctionFactor = (double)status.Drift/(double)status.Interval;
+	  secondOrder      = 1.0 / (1.0-sq(status.correctionFactor));
+
+	//  Serial.print("correctionFactor ");
+	//  Serial.println(status.correctionFactor,5);
+
+	//  Serial.print("secondOrder ");
+	//  Serial.println(secondOrder,8);
+  
+  }
+  status.previousRefTime = curRefTime;
+    
+  Serial.print("uncorr time after update ");
+  printDateTime(getUncorrected());
+
+  Serial.print("Corr time after update ");
+  printDateTime(get());	
+	
+  // Store new values 
+  store();
+}
+  
+  
+void RTCDCF77::update()   // Aquire data from buffer and convert to time_t
+{
+  time_t DCFtime = DCFC->getTime(); // Check if new DCF77 time is available
+  if (DCFtime!=0)
+  {
+    Serial.println("update");
+    set(DCFtime);
+  } else {
+	Serial.println("No update");
+  }
+}
+
+time_t RTCDCF77::get()   // Aquire data from buffer and convert to time_t
+{	
+	const time_t maxInterval = 180 * 24 * 60 * 60; // 180 days
+	time_t unCorrectedTime = DSRTC->get();
+    //time_t unCorrectedTime = 0;
+  
+	long tdelta = (long)(unCorrectedTime - status.previousRefTime);
+	long tdrift = (long)((double)status.correctionFactor*(double)tdelta);	
+
+	if (tdelta < maxInterval && status.Interval>0) {  	
+		time_t correctedTime = unCorrectedTime - tdrift;  
+	   return(correctedTime);	  
+	}
+	return(unCorrectedTime);	
+}
+
+void RTCDCF77::reset()
+{	
+  DSRTC->RAM->writeBlock<time_t>(addrPreviousRefTime, 0);	
+  DSRTC->RAM->writeBlock<time_t>(addrInterval, 0);	
+  DSRTC->RAM->writeBlock<time_t>(addrDrift, 0);	
+  DSRTC->RAM->writeBlock<time_t>(addrUpdates, 0);
+
+  status.correctionFactor=0;
+  retrieve();
+}
+
+// convenience function to display date and time
+void RTCDCF77::printDateTime(time_t time) 
+{   
+  convert->setTime(time);  
+  convert->printDate();
+  Serial.print(" ");
+  convert->printTime();
+  Serial.println();
+  
+}
+
+void RTCDCF77::printTime(time_t time) 
+{   
+  convert->setTime(time);
+  convert->printTime();
+  Serial.println();
+  Serial.println(time);
+}
+
+Stat RTCDCF77::getStatus()
+{	
+  retrieve();
+  return status;
+}
+
+
+
