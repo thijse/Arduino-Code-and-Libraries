@@ -1,11 +1,22 @@
 
+// check this out: http://www.appelsiini.net/2011/simple-usart-with-avr-libc
+
 // ADDED FOR COMPATIBILITY WITH WIRING ??
 extern "C" {
   #include <stdlib.h>
+  #include <stdarg.h>
 }
+#include <stdio.h>
 
 #include "CmdMessenger.h"
 #include <Streaming.h>
+
+ 
+int freeRam () {
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
 
 //////////////////// Cmd Messenger imp ////////////////
 CmdMessenger::CmdMessenger(Stream &ccomms)
@@ -166,7 +177,9 @@ boolean CmdMessenger::blockedTillReply(int timeout)
 // if the arguments in the future could be passed in as int/long/float etc
 // then it might make sense to use the above writeReal????() methods
 // I've removed them for now.
-char* CmdMessenger::sendCmd(int cmdId, char *msg, boolean reqAc, 
+
+// Send command, including single argument
+char* CmdMessenger::sendCmd(int cmdId, char *arg, boolean reqAc, 
 			       char *replyBuff, int butSize, int timeout, 
 			       int retryCount)
 {
@@ -175,20 +188,70 @@ char* CmdMessenger::sendCmd(int cmdId, char *msg, boolean reqAc,
   //*comms << cmdId << field_separator << msg << endl;
   comms->print(cmdId);
   comms->print(field_separator);
-  comms->print(msg);
+  comms->print(arg);
   comms->print(command_separator);
   if(print_newlines)
     comms->println(); // should append BOTH \r\n
   if (reqAc) {    
     do {
       blockedTillReply(timeout);
-      //strcpy(replyBuff, buf;
     } while( tryCount < retryCount);
   }
   
   pauseProcessing = false;
   return NULL;
 }
+
+// Send start of command. This makes it easy to send multiple arguments per command
+void CmdMessenger::sendCmdStart(int cmdId, boolean reqAc, 
+			       int timeout, int retryCount)
+{
+  _reqAc = reqAc;
+  _timeout = timeout;
+  _retryCount = retryCount;
+  _startCommand = true;
+  
+  pauseProcessing = true;
+  comms->print(cmdId);
+  //comms->print(field_separator);
+}
+
+// Send formatted argument. 
+// Note that floating points are not supported and resulting string is limited to 128 chars
+void CmdMessenger::sendCmdfArg(char *fmt, ...)
+{
+	if (_startCommand) {
+		char msg[128]; 
+		va_list args;
+		va_start (args, fmt );
+		vsnprintf(msg, 188, fmt, args);
+		va_end (args);
+		
+		comms->print(field_separator);
+		comms->print(msg);
+	}  
+}
+
+// Send end of command
+char* CmdMessenger::sendCmdEnd()
+{
+  if (_startCommand) {
+	comms->print(command_separator);
+	if(print_newlines)
+		comms->println(); // should append BOTH \r\n
+	int tryCount = 0; 
+	if (_reqAc) {    
+		do {
+		  blockedTillReply(_timeout);
+		} while( tryCount < _retryCount);
+	}	 
+		  
+  }
+  pauseProcessing = false;
+  _startCommand = false;
+  return NULL;
+}
+
 
 
 // Not sure if it will work for signed.. check it out
@@ -214,6 +277,7 @@ char* CmdMessenger::writeRealFloat(float val, char buff[4])
   return buff;
 }
 */
+
 
 int CmdMessenger::readInt()
 {

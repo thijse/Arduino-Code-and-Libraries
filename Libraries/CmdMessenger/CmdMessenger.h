@@ -23,17 +23,24 @@ extern "C" {
 class CmdMessenger
 {  
 
-protected:
+protected:  
+  bool    _reqAc;
+  int     _timeout;
+  int     _retryCount;
+  bool    _startCommand;
+  
   uint8_t bufferIndex;     // Index where to write the data
   uint8_t bufferLength;    // Is set to MESSENGERBUFFERSIZE
   uint8_t bufferLastIndex; // The last index of the buffer
 
+  
+  
   messengerCallbackFunction default_callback;
   messengerCallbackFunction callbackList[MAXCALLBACKS];
 
   // (not implemented, generally not needed)
   // when we are sending a message and requre answer or acknowledgement
-  // suspend any processing (process()) when serial intterupt is recieved
+  // suspend any processing (process()) when serial intterupt is received
   // Even though we usually only have single processing thread we still need
   // this i think because Serial interrupts.
   // Could also be usefull when we want data larger than MESSENGERBUFFERSIZE
@@ -80,6 +87,33 @@ public:
 		    char *replyBuff = NULL, int butSize = 0, int timeout = DEFAULT_TIMEOUT, 
 		    int retryCount = 10);
 
+		
+  void sendCmdStart(int cmdId, boolean reqAc = false, int timeout = DEFAULT_TIMEOUT, int retryCount = 10);
+  void sendCmdfArg(char *fmt, ...);
+  
+  // Send argument. 
+  // Note that this will only succeed if a sendCmdStart has been issued first
+  template <class T>
+  void sendCmdArg(T arg, int n)
+  {
+	if (_startCommand) {
+		comms->print(field_separator);
+		comms->print(arg,n);
+	}
+  }
+
+  template <class T>
+  void sendCmdArg(T arg)
+  {
+	if (_startCommand) {
+		comms->print(field_separator);
+		comms->print(arg);
+	}
+  }
+  
+  char* sendCmdEnd();
+		
+		
   void feedinSerialData();
   
   char command_separator;
