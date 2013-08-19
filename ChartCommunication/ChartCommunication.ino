@@ -27,35 +27,6 @@ Adafruit_MAX31855 thermocouple(thermoCLK, thermoCS, thermoDO);
 
 // ------------------ S E R I A L  M O N I T O R -----------------------------
 // 
-// Try typing these command messages in the serial monitor!
-// 
-// 4,hi,heh,ho!;
-// 5;
-// 5,dGhlIGJlYXJzIGFyZSBhbGxyaWdodA==;
-// 5,dGhvc2UgbmFzdHkgY29udHJvbCA7OyBjaGFyYWN0ZXJzICws==;
-// 2;
-// 6;
-// 
-// 
-// Expected output:
-// 
-// 1,Arduino ready;
-// 1,bens cmd recieved;
-// 1,hi;
-// 1,heh;
-// 1,ho!;
-// 1,jerrys cmd recieved;
-// 1,"the bears are allright" encoded in base64...;
-// 1,dGhlIGJlYXJzIGFyZSBhbGxyaWdodA==;
-// 1,jerrys cmd recieved;
-// 1,what you send me, decoded base64...;
-// 1,the bears are allright;
-// 1,jerrys cmd recieved;
-// 1,what you send me, decoded base64...;
-// 1,those nasty control ;; characters ,,;
-// 1,Arduino ready;
-// 3,Unknown command;
-// 
 
 
 // ------------------ C M D  L I S T I N G ( T X / R X ) ---------------------
@@ -66,7 +37,7 @@ enum
   // Default commands
   kCOMM_ERROR      = 0, // Lets Arduino report serial port comm error back to the PC (only works for some comm errors)
   kACK             = 1, // Arduino acknowledges cmd was received
-  kARDUINO_READY   = 2, // After opening the comm port, send this cmd 02 from PC to check arduino is ready
+  kARE_YOU_READY   = 2, // After opening the comm port, send this cmd 02 from PC to check arduino is ready
   kERR             = 3, // Arduino reports badly formatted cmd, or cmd not recognised
 
   // Custom commands
@@ -105,6 +76,8 @@ void stopAcq()
 {
   acquireData = false;
   cmdMessenger.sendCmd(kACQ_STOPPED, "Stopped acquisition");
+  int isAck = cmdMessenger.sendCmd(kARE_YOU_READY, "Asking PC if ready", true, kACK,1000 );
+  //if(isAck) { Serial << "Acknowledged!"; } else { Serial << "Not Acknowledged!"; } 
 }
 
 // ------------------ D E F A U L T  C A L L B A C K S -----------------------
@@ -141,14 +114,14 @@ void attach_callbacks(messengerCallbackFunction* callbacks)
 void setup() 
 {
   // Listen on serial connection for messages from the pc
- //Serial.begin(115200); // Arduino Uno, Mega, with AT8u2 USB
- Serial.begin(57600);  // Arduino Duemilanove, FTDI Serial
+ Serial.begin(115200); // Arduino Uno, Mega, with AT8u2 USB
+// Serial.begin(57600);  // Arduino Duemilanove, FTDI Serial
 //Serial.begin(9600); 
   // cmdMessenger.discard_LF_CR(); // Useful if your terminal appends CR/LF, and you wish to remove them
   cmdMessenger.print_LF_CR();   // Make output more readable whilst debugging in Arduino Serial Monitor
   
   // Attach default / generic callback methods
-  cmdMessenger.attach(kARDUINO_READY, arduino_ready);
+  cmdMessenger.attach(kARE_YOU_READY, arduino_ready);
   cmdMessenger.attach(unknownCmd);
 
   // Attach my application's user-defined callback methods
@@ -168,7 +141,7 @@ void setup()
 // ------------------ M A I N ( ) --------------------------------------------
 
 
-long sampleInterval = 100; // 1 second
+long sampleInterval = 10; // 1 second
 long previousSampleMillis = 0;
 
 
