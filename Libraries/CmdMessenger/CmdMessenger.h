@@ -20,6 +20,7 @@ extern "C" {
 #define MESSENGERBUFFERSIZE 64 // The maximum length of the buffer (defaults to 64)
 #define DEFAULT_TIMEOUT 5000   // Abandon incomplete messages if nothing heard after 5 seconds
 
+#define 
 class CmdMessenger
 {  
 
@@ -28,6 +29,9 @@ protected:
   int     _timeout;
   int     _retryCount;
   bool    _startCommand;
+  int      _lastCommandId;
+  
+  
   
   uint8_t bufferIndex;     // Index where to write the data
   uint8_t bufferLength;    // Is set to MESSENGERBUFFERSIZE
@@ -46,19 +50,25 @@ protected:
   // Could also be usefull when we want data larger than MESSENGERBUFFERSIZE
   // we could send a startCmd, which could pauseProcessing and read directly
   // from serial all the data, send acknowledge etc and then resume processing  
-  boolean pauseProcessing;
+  bool pauseProcessing;
     
   void handleMessage(); 
   void init(Stream &comms, char field_separator, char command_separator);
-  uint8_t process(int serialByte);
+  bool CheckForAck(int AckCommand);
+  uint8_t processLine(int serialByte);
+  uint8_t processAndCallBack(int serialByte);
+  uint8_t processAndWaitForAck(int serialByte, int AckCommand);
   void reset();
-
+  char* split(char *str, const char *delim, char **nextp);
+  
   char buffer[MESSENGERBUFFERSIZE]; // Buffer that holds the data
   uint8_t messageState;
   uint8_t dumped;
   char* current; // Pointer to current data
   char* last;
-
+  char prevChar; // Previous char needed for unescaping
+  
+  
 public:
   CmdMessenger(Stream &comms);
   CmdMessenger(Stream &comms, char fld_separator);
@@ -70,25 +80,47 @@ public:
 
   uint8_t next();
   uint8_t available();
-
+  int CommandID();
+  
   int readInt();
   char readChar();
-  void copyString(char *string, uint8_t size);
-  uint8_t checkString(char *string);
+  float readFloat();
+  void readString(char *string, uint8_t size);
+  uint8_t compareString(char *string);
 
   // Polymorphism used to interact with serial class
   // Stream is an abstract base class which defines a base set
   // of functionality used by the serial classes.
   Stream *comms;
   
+  
   void attach(byte msgId, messengerCallbackFunction newFunction);
   
-  char* sendCmd(int cmdId, char *msg, boolean reqAc = false, 
-		    char *replyBuff = NULL, int butSize = 0, int timeout = DEFAULT_TIMEOUT, 
-		    int retryCount = 10);
+ // bool sendCmd(int cmdId, char *arg, bool reqAc = false, int ackCmdId = 1, int timeout = DEFAULT_TIMEOUT );
 
-		
-  void sendCmdStart(int cmdId, boolean reqAc = false, int timeout = DEFAULT_TIMEOUT, int retryCount = 10);
+// Send command, including single argument
+  template <class T>
+ bool sendCmd(int cmdId, T arg, bool reqAc = false, int ackCmdId = 1, int timeout = DEFAULT_TIMEOUT )
+ {
+  pauseProcessing = true;
+  //ackReply = false;
+  //*comms << cmdId << field_separator << msg << endl;
+  comms->print(cmdId);
+  comms->print(field_separator);
+  comms->print(arg);
+  comms->print(command_separator);
+  if(print_newlines)
+    comms->println(); // should append BOTH \r\n
+  int ackReply;
+  if (reqAc) {
+      ackReply = blockedTillReply(timeout, ackCmdId);
+  }
+  
+  pauseProcessing = false;
+  return ackReply;
+}	
+	
+  void sendCmdStart(int cmdId, bool reqAc = false, int timeout = DEFAULT_TIMEOUT, int retryCount = 10);
   void sendCmdfArg(char *fmt, ...);
   
   // Send argument. 
@@ -119,9 +151,9 @@ public:
   char command_separator;
   char field_separator;
 
-  boolean discard_newlines;
-  boolean print_newlines;
+  bool discard_newlines;
+  bool print_newlines;
 
-  boolean blockedTillReply(int timeout = DEFAULT_TIMEOUT);
+  bool blockedTillReply(int timeout = DEFAULT_TIMEOUT, int ackCmdId = 1);
 };
 #endif
