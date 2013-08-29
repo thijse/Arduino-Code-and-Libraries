@@ -2,158 +2,182 @@
 #define CmdMessenger_h
 
 #include <inttypes.h>
-#if defined(ARDUINO) && ARDUINO >= 100
-#include "Arduino.h"
+#if ARDUINO >= 100
+#include <Arduino.h> 
 #else
-#include "WProgram.h"
+#include <WProgram.h> 
 #endif
 
+//#include "Stream.h"
 
-#include "Stream.h"
-
-extern "C" {
+extern "C"
+{
   // Our callbacks are always method signature: void cmd(void);
-  typedef void (*messengerCallbackFunction)(void);
+  typedef void (*messengerCallbackFunction) (void);
 }
 
-#define MAXCALLBACKS 50        // The maximum number of unique commands
-#define MESSENGERBUFFERSIZE 64 // The maximum length of the buffer (defaults to 64)
-#define DEFAULT_TIMEOUT 5000   // Abandon incomplete messages if nothing heard after 5 seconds
+#define MAXCALLBACKS 50         // The maximum number of unique commands
+#define MESSENGERBUFFERSIZE 64  // The maximum length of the buffer (defaults to 64)
+#define DEFAULT_TIMEOUT 5000    // Abandon incomplete messages if nothing heard after 5 seconds
 
-#define 
+// Message States
+enum
+{
+  // Commands
+  kProccesingMessage,
+  kEndOfMessage,
+  kProcessingArguments,
+};
+
 class CmdMessenger
-{  
+{
 
-protected:  
-  bool    _reqAc;
-  int     _timeout;
-  int     _retryCount;
-  bool    _startCommand;
-  int      _lastCommandId;
-  
-  
-  
-  uint8_t bufferIndex;     // Index where to write the data
-  uint8_t bufferLength;    // Is set to MESSENGERBUFFERSIZE
-  uint8_t bufferLastIndex; // The last index of the buffer
+protected:
+  bool _startCommand;
+  uint8_t _lastCommandId;
+  uint8_t bufferIndex;          // Index where to write the data
+  uint8_t bufferLength;         // Is set to MESSENGERBUFFERSIZE
+  uint8_t bufferLastIndex;      // The last index of the buffer
 
-  
-  
+  char ArglastChar;             //bookkeeping of argument escape char 
+  char CmdlastChar;             //bookkeeping of command escape char 
+
   messengerCallbackFunction default_callback;
   messengerCallbackFunction callbackList[MAXCALLBACKS];
-
-  // (not implemented, generally not needed)
-  // when we are sending a message and requre answer or acknowledgement
-  // suspend any processing (process()) when serial intterupt is received
-  // Even though we usually only have single processing thread we still need
-  // this i think because Serial interrupts.
-  // Could also be usefull when we want data larger than MESSENGERBUFFERSIZE
-  // we could send a startCmd, which could pauseProcessing and read directly
-  // from serial all the data, send acknowledge etc and then resume processing  
   bool pauseProcessing;
-    
-  void handleMessage(); 
-  void init(Stream &comms, char field_separator, char command_separator);
-  bool CheckForAck(int AckCommand);
-  uint8_t processLine(int serialByte);
-  uint8_t processAndCallBack(int serialByte);
-  uint8_t processAndWaitForAck(int serialByte, int AckCommand);
-  void reset();
-  char* split(char *str, const char *delim, char **nextp);
-  
-  char buffer[MESSENGERBUFFERSIZE]; // Buffer that holds the data
+
+  void handleMessage ();
+  void init (Stream & comms, const char fld_separator,
+             const char cmd_separator, const char esc_character);
+  bool CheckForAck (int AckCommand);
+  uint8_t processLine (int serialByte);
+  uint8_t processAndCallBack (int serialByte);
+  bool processAndWaitForAck (int serialByte, int AckCommand);
+  void reset ();
+
+  int findNext (char *str, char delim);
+  char *split_r (char *str, const char delim, char **nextp);
+    template < class T > void writeBinary (const T & value)
+  {
+    const byte *bytePointer = (const byte *) (const void *) &value;
+    for (unsigned int i = 0; i < sizeof (value); i++)
+      {
+        printEsc (*bytePointer);
+        *bytePointer++;
+      }
+  }
+
+  template < class T > T readBin (char *str)
+  {
+    T value;
+    unescape (str);
+    byte *bytePointer = (byte *) (const void *) &value;
+    for (unsigned int i = 0; i < sizeof (value); i++)
+      {
+        *bytePointer = str[i];
+        *bytePointer++;
+      }
+    return value;
+  }
+  void printEsc (char *str);
+  void printEsc (char str);
+  bool isEscaped (char *currChar, const char escapeChar, char *lastChar);
+
+  char buffer[MESSENGERBUFFERSIZE];     // Buffer that holds the data
   uint8_t messageState;
-  uint8_t dumped;
-  char* current; // Pointer to current data
-  char* last;
-  char prevChar; // Previous char needed for unescaping
-  
-  
-public:
-  CmdMessenger(Stream &comms);
-  CmdMessenger(Stream &comms, char fld_separator);
-  CmdMessenger(Stream &comms, char fld_separator, char cmd_separator);
-
-  void attach(messengerCallbackFunction newFunction);
-  void discard_LF_CR();
-  void print_LF_CR();
-
-  uint8_t next();
-  uint8_t available();
-  int CommandID();
-  
-  int readInt();
-  char readChar();
-  float readFloat();
-  void readString(char *string, uint8_t size);
-  uint8_t compareString(char *string);
-
-  // Polymorphism used to interact with serial class
-  // Stream is an abstract base class which defines a base set
-  // of functionality used by the serial classes.
+  bool dumped;
+  char *current;                // Pointer to current data
+  char *last;
+  char prevChar;                // Previous char needed for unescaping
   Stream *comms;
-  
-  
-  void attach(byte msgId, messengerCallbackFunction newFunction);
-  
- // bool sendCmd(int cmdId, char *arg, bool reqAc = false, int ackCmdId = 1, int timeout = DEFAULT_TIMEOUT );
-
-// Send command, including single argument
-  template <class T>
- bool sendCmd(int cmdId, T arg, bool reqAc = false, int ackCmdId = 1, int timeout = DEFAULT_TIMEOUT )
- {
-  pauseProcessing = true;
-  //ackReply = false;
-  //*comms << cmdId << field_separator << msg << endl;
-  comms->print(cmdId);
-  comms->print(field_separator);
-  comms->print(arg);
-  comms->print(command_separator);
-  if(print_newlines)
-    comms->println(); // should append BOTH \r\n
-  int ackReply;
-  if (reqAc) {
-      ackReply = blockedTillReply(timeout, ackCmdId);
-  }
-  
-  pauseProcessing = false;
-  return ackReply;
-}	
-	
-  void sendCmdStart(int cmdId, bool reqAc = false, int timeout = DEFAULT_TIMEOUT, int retryCount = 10);
-  void sendCmdfArg(char *fmt, ...);
-  
-  // Send argument. 
-  // Note that this will only succeed if a sendCmdStart has been issued first
-  template <class T>
-  void sendCmdArg(T arg, int n)
-  {
-	if (_startCommand) {
-		comms->print(field_separator);
-		comms->print(arg,n);
-	}
-  }
-
-  template <class T>
-  void sendCmdArg(T arg)
-  {
-	if (_startCommand) {
-		comms->print(field_separator);
-		comms->print(arg);
-	}
-  }
-  
-  char* sendCmdEnd();
-		
-		
-  void feedinSerialData();
-  
   char command_separator;
   char field_separator;
+  char escape_character;
+public:
+  CmdMessenger (Stream & comms, const char fld_separator =
+                ',', const char cmd_separator =
+                ';', const char esc_character = '/');
 
-  bool discard_newlines;
+  void attach (messengerCallbackFunction newFunction);
+  //void discard_LF_CR();
+  void print_LF_CR ();
+
+  bool next ();
+  bool available ();
+  uint8_t CommandID ();
+
+  int readInt ();
+  char readChar ();
+  float readFloat ();
+  char *readString ();
+  void copyString (char *string, uint8_t size);
+  uint8_t compareString (char *string);
+
+  template < class T > void sendCmdBinArg (T arg)
+  {
+    if (_startCommand)
+      {
+        comms->print (field_separator);
+        writeBinary (arg);
+      }
+  }
+
+  template < class T > T readBinary ()
+  {
+    if (next ())
+      {
+        dumped = true;
+        return readBin < T > (current);
+      }
+  }
+  void attach (byte msgId, messengerCallbackFunction newFunction);
+
+  void unescape (char *fromChar);
+// Send command, including single argument
+  template < class T >
+    bool sendCmd (int cmdId, T arg, bool reqAc = false, int ackCmdId =
+                  1, int timeout = DEFAULT_TIMEOUT)
+  {
+    sendCmdStart (cmdId);
+    sendCmdArg (arg);
+    sendCmdEnd (reqAc, ackCmdId, timeout);
+  }
+  template < class T >
+    bool sendBinCmd (int cmdId, T arg, bool reqAc = false, int ackCmdId =
+                     1, int timeout = DEFAULT_TIMEOUT)
+  {
+    sendCmdStart (cmdId);
+    sendCmdBinArg (arg);
+    sendCmdEnd (reqAc, ackCmdId, timeout);
+  }
+
+  void sendCmdStart (int cmdId);
+  void sendCmdEscArg (char *arg);
+  void sendCmdfArg (char *fmt, ...);
+  // Send argument. 
+  // Note that this will only succeed if a sendCmdStart has been issued first
+  template < class T > void sendCmdArg (T arg, int n)
+  {
+    if (_startCommand)
+      {
+        comms->print (field_separator);
+        comms->print (arg, n);
+      }
+  }
+  template < class T > void sendCmdArg (T arg)
+  {
+    if (_startCommand)
+      {
+        comms->print (field_separator);
+        comms->print (arg);
+      }
+  }
+  bool sendCmdEnd (bool reqAc = false, int ackCmdId = 1, int timeout =
+                   DEFAULT_TIMEOUT);
+
+  void feedinSerialData ();
+  //bool discard_newlines;
   bool print_newlines;
-
-  bool blockedTillReply(int timeout = DEFAULT_TIMEOUT, int ackCmdId = 1);
+  bool blockedTillReply (int timeout = DEFAULT_TIMEOUT, int ackCmdId = 1);
 };
 #endif
