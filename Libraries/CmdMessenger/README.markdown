@@ -7,8 +7,9 @@ A serial messaging library for the Arduino and .NET/Mono platform
 CmdMessenger is a messaging library afor the Arduino Platform (and .NET/Mono platform). It has uses the serial port as its transport layer** 
 
 The default message format is:
-CmdId, parameter 1, [...] , parameter N;
-
+```
+Cmd Id, param 1, [...] , param N;
+```
 The library can
 * both send and receive of commands 
 * Both write and read multiple arguments
@@ -39,7 +40,7 @@ Get to know the library, by trying the examples,from simple to complex:
 	  - Define commands
 	  - Set up a serial connection
 	  - Receive a command with a parameter from the PC
-  On the PC side, it demonstrates how to:
+On the PC side, it demonstrates how to:
 	  - Define commands
 	  - Set up a serial connection
 	  - Send a command with a parameter to the Arduino
@@ -50,7 +51,7 @@ Get to know the library, by trying the examples,from simple to complex:
   it demonstrates how to:
 	  - Handle received commands that do not have a function attache
 	  - Send a command with a parameter to the PC
-  On the PC side, it demonstrates how to:
+On the PC side, it demonstrates how to:
 	  - Handle received commands that do not have a function attached
 	  - Receive a command with a parameter from the Arduino
 
@@ -61,8 +62,8 @@ Get to know the library, by trying the examples,from simple to complex:
 	  - Return multiple types status 
 	  - Receive multiple parameters,
 	  - Send multiple parameters
-  - Call a function periodically
-  On the PC side, it demonstrates how to:
+      - Call a function periodically
+On the PC side, it demonstrates how to:
 	  - Send multiple parameters, and wait for response 
 	  - Receive multiple parameters
 	  - Add logging events on data that has been sent or received
