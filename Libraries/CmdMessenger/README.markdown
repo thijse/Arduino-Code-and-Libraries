@@ -34,47 +34,47 @@ This allows for full 2-way communication between the arduino controller and the 
 ### Getting Started
 
 Get to know the library, by trying the examples,from simple to complex:
-* Receive 
+# Receive 
   The 1st example will make the PC toggle the integrated led on the arduino board. 
-  On the arduino side, it demonstrates how to:
+  * On the arduino side, it demonstrates how to:
 	  - Define commands
 	  - Set up a serial connection
 	  - Receive a command with a parameter from the PC
-On the PC side, it demonstrates how to:
+  * On the PC side, it demonstrates how to:
 	  - Define commands
 	  - Set up a serial connection
 	  - Send a command with a parameter to the Arduino
 
-* SentandReceive 
+# SentandReceive 
   This example expands the previous Receive example. The Arduino will now send back a status. 
   On the arduino side, 
-  it demonstrates how to:
+  * it demonstrates how to:
 	  - Handle received commands that do not have a function attache
 	  - Send a command with a parameter to the PC
-On the PC side, it demonstrates how to:
+  * On the PC side, it demonstrates how to:
 	  - Handle received commands that do not have a function attached
 	  - Receive a command with a parameter from the Arduino
 
-* SendandReceiveArguments
+# SendandReceiveArguments
   This example expands the previous SendandReceive example. The Arduino will now receive multiple 
   and sent multiple float values. 
-  On the arduino side, it demonstrates how to:
+  * On the arduino side, it demonstrates how to:
 	  - Return multiple types status 
 	  - Receive multiple parameters,
 	  - Send multiple parameters
       - Call a function periodically
-On the PC side, it demonstrates how to:
+  * On the PC side, it demonstrates how to:
 	  - Send multiple parameters, and wait for response 
 	  - Receive multiple parameters
 	  - Add logging events on data that has been sent or received
   
-* SendandReceiveBinaryArguments
+# SendandReceiveBinaryArguments
   This example expands the previous SendandReceiveArguments example. The Arduino will receive and send multiple 
   Binary values, demonstrating that this is more efficient way of communication. 
-  On the arduino side, it demonstrates how to:
+  * On the arduino side, it demonstrates how to:
 	  - Send binary parameters
 	  - Receive binary parameters
-  On the PC side, it demonstrates how to:
+  * On the PC side, it demonstrates how to:
 	  - Receive multiple binary parameters,
       - Send multiple binary parameters
       - How callback events can be handled while the main program waits
