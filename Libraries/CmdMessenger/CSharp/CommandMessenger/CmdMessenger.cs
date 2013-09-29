@@ -51,6 +51,8 @@ namespace CommandMessenger
         private MessengerCallbackFunction _defaultCallback;                 // The default callback
         private Dictionary<int, MessengerCallbackFunction> _callbackList;   // List of callbacks
 
+        private SendCommandQueue _sendCommandQueue;
+
         /// <summary> Definition of the messenger callback function. </summary>
         /// <param name="receivedCommand"> The received command. </param>
         public delegate void MessengerCallbackFunction(ReceivedCommand receivedCommand);
@@ -131,6 +133,7 @@ namespace CommandMessenger
             Escaping.EscapeChars(fieldSeparator, commandSeparator, escapeCharacter);
             _callbackList = new Dictionary<int, MessengerCallbackFunction>();
             PrintLfCr = false;
+            _sendCommandQueue = new SendCommandQueue(this);
             _communications.NewLineReceived += NewSerialDataReceived;
         }
 
@@ -351,6 +354,11 @@ namespace CommandMessenger
             {
                 if (synced) Monitor.Exit(_processSerialDataLock);
             }
+        }
+
+        public void QueueCommand(SendCommand sendCommand)
+        {
+            _sendCommandQueue.QueueCommand(sendCommand);
         }
 
         /// <summary> Helper function to Invoke or directly call event. </summary>

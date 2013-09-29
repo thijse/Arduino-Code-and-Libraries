@@ -1,0 +1,21 @@
+!Using CmdMessenger
+
+As of version 3, the CmdMessenger messaging library has an Arduino and .NET+Mono compatible C# implementation, and is packaged with examples of the these two sides communicating with each other. 
+
+The library implements
+#   Commands that can be sent or received.
+#   Multiple arguments can be appended to commands.
+#   Callback functions can be triggered on received commands.
+#   All basic data-types (char arrays, floats, ints, bytes), both for sending and receiving.
+#   Optional waiting for a acknowlegde commands.
+#   Escaping data. The special characters that would be interpreted to be field separators or command separators, can be escaped and used in arguments.
+#   Sending and receiving both plain text and binary data. 
+
+You can find the CmdMessenger Playground page here: \\
+[[Code.CmdMessenger|CmdMessenger]]
+
+Download the library here: \\
+[[http://thijs.elenbaas.net/downloads/?did=9]]
+ 
+And find more background and and example of the functionality here: \\
+[[http://thijs.elenbaas.net/2013/09/arduino-to-pc-messaging]]

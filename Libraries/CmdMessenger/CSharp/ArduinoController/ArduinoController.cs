@@ -123,7 +123,8 @@ namespace ArduinoController
             var command = new SendCommand((int)Command.SetLedFrequency,ledFrequency);
 
             // Send command
-            _cmdMessenger.SendCommand(command);
+            //_cmdMessenger.SendCommand(command);
+            _cmdMessenger.QueueCommand(command);
         }
 
         public void SetLedState(bool ledState)

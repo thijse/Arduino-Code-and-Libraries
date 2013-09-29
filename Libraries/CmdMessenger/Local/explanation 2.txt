@@ -1,0 +1,10 @@
+When looking for a library that does messaging only, I found the best option to be CmdMessenger 2. It implements
+- Commands that can be sent or received.
+- multiple arguments can be appended to commands.
+- Callback functions can be triggered on received commands.
+- All basic data-types (char arrays, floats, ints, bytes), both for sending and receiving.
+- Optional waiting for a acknowlegde commands.
+- Escaping data. The special characters that would be interpreted to be field separators or command separators, can be escaped and used in arguments.
+- sending as well as receiving binary data. 
+
+* [[http://playground.arduino.cc/Code/CmdMessenger|CmdMessenger messaging library]]

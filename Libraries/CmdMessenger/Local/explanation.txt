@@ -1,0 +1,25 @@
+Hi,
+
+For a small project I''m working on, I wanted to communicate with a C# application to log some data. Since the serial-over-USB connection is the de-facto connection to the Arduino, I had expected to find a messaging protocol over the serial port without any issue. This turned out to be more difficult than I had expected. On the Interfacing with software page on the Arduino Playground,  I found two mature, open and well maintained libraries, Bitlash and Firmata, which seemed to be promising at first. However, these are not quite what I am looking for: both libraries are designed to place all Arduino control at the PC side and make the Arduino into a IO component, and this is not what I want.
+
+When looking for a library that does messaging only, I found the best option to be CmdMessenger 2. It implements
+- Commands that can be sent or received
+- multiple arguments can be sent together with the command
+- Callback functions can be triggered on received commands
+
+But even though it was already a pretty good piece of work, it was still lacking in some aspects. I modified so that:
+- It has an asymmetrical implementation. It is now possible to send all basic data-types (char arrays, floats, ints, bytes), instead of just strings.
+- It can wait for an acknowlegde command.
+- It has the ability escape data. The  special characters that would be interpreted to be field separators or command separators, can now be escaped.
+- It has the ability to send binary data. Using escaping, basic data-types can now be send over in binary form, for efficiency and accuracy
+
+But most importantly, I wrote an implementation of the library for C# that runs both on .NET and Mono.  For a messaging protocol to really work, both sides need to speak it.
+ 
+You can download the library here:  
+  http://thijs.elenbaas.net/downloads/?did=9
+ 
+Or at the Github repository:
+  https://github.com/thijse/Arduino-Libraries/tree/master/CmdMessenger
+ 
+And find a detailed explanation and sample of the functionality here           
+   http://thijs.elenbaas.net/2013/09/arduino-to-pc-messaging/

@@ -1,0 +1,180 @@
+@iets over coffee and arduino's
+
+Introduction
+
+When I started on a temperature measure and control project, I wanted to log the temperature data measured with my thermocouple. Since the serial over USB connection is the most ubiquitus connection to the Arduino, so I had expected to easily find a messenging protocol over the serial port. This turned out to be more difficult than I had expected. I found two high quality libraries, Bitlash and Firmata, but both basically put all control at the PC side. Both are more that just a communication library and provide functionality to move control of all the IO of the Arduino to the PC side. Using the Arduino processor to do actual work, seems to be more of an afterthought, if at all possible
+
+When looking at simpler messaging protocol, I found the only option to be CmdMessenger 2. While already a pretty good piece of work,  it was still lacking in some aspects
+1. No CmdMessenger library for the PC side. For a messaging protocol to really work, both sides need to speak it.
+2. A asymmetrical implementation. That is, while it is possible to receive al basic datatypes (char arrays, floats, ints, bytes), it is only able to send strings.
+3. No ability to send binary data. That is to say that some special characters, would be interpreted by the library to be field separators or command separators.
+4. The ability to wait for a specifi response from the other side
+
+I resolved these issues in the 3rd iteration of the CmdMessenger library. One of the things that is still missing is checksumming of commands, as explained in this very nice article (http://eli.thegreenplace.net/2009/08/12/framing-in-serial-communications/)I seem to be the fourth author who worked on this library, which is something I have not seen before in Arduino development. Typically there is only one author to a library, and if he/she stops working at it, work is hardly ever taken over. It may be that this tells something about the library, possibly that it is both of interest to many people, and not yet mature enough? Be that as it may, I believe the library has taken a step further towards maturity.
+
+This was the first time I implemented the same functionality in both C++ and C# (it works on .net and Mono), and it made me appreciate all the more how far of the programming languages are apart, even though the syntax is quite similar. In fact, C++ on arduino is more like old-school C put in classes (no STL, dynamic arrays etc), which makes the difference   bigger still. The Arduino code is quite tight, and uses only a minute fraction of the resources that the C# version does (clock cycles, program space, memory), but on the other hand does not support arbitrarily large buffers, event handling while the main thread continues and all kinds of convenient tooling.
+
+The library
+
+First of all, the library can be downloaded here:
+
+It comes with the Arduino and C# implementation, automatically generated documentation, and different samples of Arduino - PC communication, going from simple command sending, to sending, receiving and acknowledging multi-parameter binary commands. Each sample
+consists of a Arduino sketch and a Visual Studio/ MonoDevelop project, designed to interact with eachother.
+
+Let's have a look at an example. In this example the PC will toggle the onboard led of the arduino, by sending commands to set the state of the led. The arduino receives, the command, reads the parameter with the requested led state and set the led accordingly. Next, the Arduino will send a command to the PC returning the set state.
+
+The arduino sketch
+
+#include <CmdMessenger.h>  // CmdMessenger
+
+// Blinking led variables 
+bool ledState                   = 0;   // Current state of Led
+const int kBlinkLed             = 13;  // Pin of internal Led
+
+// Attach a new CmdMessenger object to the default Serial port
+CmdMessenger cmdMessenger = CmdMessenger(Serial);
+
+// This is the list of recognized commands. These can be commands that can either be sent or received. 
+// In order to receive, attach a callback function to these events
+enum
+{
+  kSetLed              , // Command to request led to be set in specific state
+  kStatus              , // Command to report status
+};
+
+// Callbacks define on which received commands we take action
+void attachCommandCallbacks()
+{
+  // Attach callback methods
+  cmdMessenger.attach(kSetLed, OnSetLed);
+}
+
+// Callback function that sets led on or off
+void OnSetLed()
+{
+  // Read led state argument, interpret string as boolean
+  ledState = cmdMessenger.readBoolArg();
+  // Set led
+  digitalWrite(kBlinkLed, ledState?HIGH:LOW);
+  // Send back status that describes the led state
+  cmdMessenger.sendCmd(kStatus,(int)ledState);
+}
+
+// Setup function
+void setup() 
+{
+  // Listen on serial connection for messages from the PC
+  Serial.begin(115200); 
+
+  // Adds newline to every command
+  cmdMessenger.printLfCr();   
+
+  // Attach my application's user-defined callback methods
+  attachCommandCallbacks();
+
+  // Send the status to the PC that says the Arduino has booted
+  // Note that this is a good debug function: it will let you also know 
+  // if your program had a bug and the arduino restarted  
+  cmdMessenger.sendCmd(kStatus,"Arduino has started!");
+
+  // set pin for blink LED
+  pinMode(kBlinkLed, OUTPUT);
+}
+
+// Loop function
+void loop() 
+{
+  // Process incoming serial data, and perform callbacks
+  cmdMessenger.feedinSerialData();
+}
+
+
+
+Oh the Arduino side
+
+using System;
+using System.Threading;
+using CommandMessenger;
+
+namespace SendAndReceive
+{
+    // This is the list of recognized commands. These can be commands that can either be sent or received. 
+    // In order to receive, attach a callback function to these events
+    enum Command
+    {
+        SetLed, 
+        Status, 
+    };
+
+    public class SendAndReceive
+    {
+        public bool RunLoop { get; set; }
+        private SerialPortManager _serialPortManager;
+        private CmdMessenger _cmdMessenger;
+        private bool _ledState;
+        private int _count;
+
+        // Setup function
+        public void Setup()
+        {
+            _ledState = false;
+            // Create Serial Port object
+            _serialPortManager = new SerialPortManager                      
+                {
+                    CurrentSerialSettings = {PortName = "COM6", BaudRate = 115200} // object initializer
+                };                   
+            _cmdMessenger = new CmdMessenger(_serialPortManager);            
+            // Attach the callbacks to the Command Messenger
+            AttachCommandCallBacks();           
+            // Start listening
+            _cmdMessenger.StartListening();                                
+        }
+
+        // Loop function
+        public void Loop()
+        {
+            _count++;
+            // Create command
+            var command = new SendCommand((int)Command.SetLed,_ledState);               
+            // Send command
+            _cmdMessenger.SendCommand(command);
+            // Wait for 1 second and repeat
+            Thread.Sleep(1000);
+            _ledState = !_ledState;                                        // Toggle led state  
+            if (_count > 100) RunLoop = false;                             // Stop loop after 100 rounds
+        }
+
+        // Exit function
+        public void Exit()
+        {
+            // Stop listening
+            _cmdMessenger.StopListening();
+            // Dispose Command Messenger
+            _cmdMessenger.Dispose();
+            // Dispose Serial Port object
+            _serialPortManager.Dispose();
+            // Pause before stop
+            Console.WriteLine("Press any key to stop...");
+            Console.ReadKey();
+        }
+
+        /// Attach command call backs. 
+        private void AttachCommandCallBacks()
+        {
+            _cmdMessenger.Attach((int)Command.Status, OnStatus);
+        }
+
+        // Callback function that prints the Arduino status to the console
+        void OnStatus(ReceivedCommand arguments)
+        {
+            Console.Write("Arduino status: ");
+            Console.WriteLine(arguments.ReadStringArg());
+        }
+    }
+}
+
+
+
+
+
+
