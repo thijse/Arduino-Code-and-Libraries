@@ -31,7 +31,7 @@ namespace ArduinoController
         // Update value label and arduinoController on value changed using slider
         private void LedFrequencyTrackBarScroll(object sender, EventArgs e)
         {
-            _ledFrequency = 0.4 + ((double)LedFrequencyLabelTrackBar.Value) / 2.5;
+            _ledFrequency = 0.4 + ((double)LedFrequencyLabelTrackBar.Value) / 25.0;
             LedFrequencyValue.Text = _ledFrequency.ToString(CultureInfo.InvariantCulture);
             _arduinoController.SetLedFrequency(_ledFrequency);
         }
@@ -52,6 +52,21 @@ namespace ArduinoController
         private void LedFrequencyLabelTrackBarValueChanged(object sender, EventArgs e)
         {
             LedFrequencyTrackBarScroll(sender,e);
+        }
+
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing )
+            {
+                _arduinoController.Exit();
+                if (components!=null)
+                components.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }

@@ -10,33 +10,58 @@ using System;
 using CommandMessenger;
 using CommandMessenger.TransportLayer;
 
-namespace ArduinoController
+using System.Threading;
+namespace DataLogging
 {
     enum Command
     {
         Acknowledge,
         Error,
-        SetLed,
-        SetLedFrequency,
+        StartLogging,
+        PlotDataPoint,
+        SetGoalTemperature,
     };
 
-    public class ArduinoController
+    public class TemperatureControl
     {
         // This class (kind of) contains presentation logic, and domain model.
         // ChartForm.cs contains the view components 
-
-        private SerialTransport    _serialTransport;
+        private SerialTransport   _serialTransport;
         private CmdMessenger      _cmdMessenger;
-        private ControllerForm    _controllerForm;
-
+        private ChartForm         _chartForm;
+        private double            _goalTemperature;
         // ------------------ MAIN  ----------------------
 
-        // Setup function
-        public void Setup(ControllerForm controllerForm)
+
+        //private string _goalTemperature;
+        public double GoalTemperature
         {
-            // storing the controller form for later reference
-            _controllerForm = controllerForm;
+            get { return _goalTemperature; }
+            set
+            {
+                if (_goalTemperature != value)
+                {
+                    _goalTemperature = value;
+                    SetGoalTemperature(_goalTemperature);
+                    if (GoalTemperatureChanged!=null) GoalTemperatureChanged();
+                }
+            }
+        }
+        public Action GoalTemperatureChanged;
+
+        // Setup function
+        public void Setup(ChartForm chartForm)
+        {
+           
+            // getting the chart control on top of the chart form.
+            _chartForm = chartForm;
             
+            // Set up chart
+            _chartForm.SetupChart();
+
+            // Connect slider to GoalTemperatureChanged
+            GoalTemperatureChanged += new Action(() => _chartForm.GoalTemperatureTrackBarScroll(null, null));
+
             // Create Serial Port object
             _serialTransport = new SerialTransport
             {
@@ -46,7 +71,10 @@ namespace ArduinoController
             _cmdMessenger = new CmdMessenger(_serialTransport);
 
             // Tell CmdMessenger to "Invoke" commands on the thread running the WinForms UI
-            _cmdMessenger.SetControlToInvokeOn(_controllerForm);
+            _cmdMessenger.SetControlToInvokeOn(chartForm);
+
+            // Set Received command strategy that removes commands that are older than 1 sec
+            _cmdMessenger.ReceiveCommandStrategy(new StaleGeneralStrategy(1000));            
 
             // Attach the callbacks to the Command Messenger
             AttachCommandCallBacks();
@@ -60,15 +88,27 @@ namespace ArduinoController
             // Start listening
             _cmdMessenger.StartListening();
 
-            _controllerForm.SetLedState(true);
-            _controllerForm.SetFrequency(2);
+            // Send command to start sending data
+            var command = new SendCommand((int)Command.StartLogging);
+
+            // Send command
+            _cmdMessenger.SendCommand(command);
+
+            Thread.Sleep(250);
+
+            _cmdMessenger.ClearReceiveQueue();
+
+            // Set default goal temperature
+            GoalTemperature = 25;
+            
+
         }
 
         // Exit function
         public void Exit()
         {
             // Stop listening
-            _cmdMessenger.StopListening();
+            _cmdMessenger.StopListening();           
 
             // Dispose Command Messenger
             _cmdMessenger.Dispose();
@@ -83,6 +123,7 @@ namespace ArduinoController
             _cmdMessenger.Attach(OnUnknownCommand);
             _cmdMessenger.Attach((int)Command.Acknowledge, OnAcknowledge);
             _cmdMessenger.Attach((int)Command.Error, OnError);
+            _cmdMessenger.Attach((int)Command.PlotDataPoint, OnPlotDataPoint);
         }
 
         // ------------------  CALLBACKS ---------------------
@@ -106,6 +147,22 @@ namespace ArduinoController
             Console.WriteLine(@"Arduino has experienced an error");
         }
 
+        // Callback function that plots a data point for ADC 1 and ADC 2
+        private void OnPlotDataPoint(ReceivedCommand arguments)
+        {
+             
+            var time        = arguments.ReadFloatArg();
+            var currTemp    = arguments.ReadFloatArg();
+            //var refTemp     = arguments.ReadFloatArg();
+            var refTemp = 0;
+            var goalTemp    = arguments.ReadFloatArg();
+            var heaterValue = arguments.ReadFloatArg();
+            var heaterPwm   = arguments.ReadBoolArg();
+
+           // _chartForm.UpdateGraph(time, currTemp, refTemp, _goalTemperature, heaterValue, heaterPwm);
+            _chartForm.UpdateGraph(time, currTemp, refTemp, goalTemp, heaterValue, heaterPwm);
+        }
+
         // Log received line to console
         private void NewLineReceived(object sender, EventArgs e)
         {
@@ -118,24 +175,17 @@ namespace ArduinoController
             Console.WriteLine(@" Sent > " + _cmdMessenger.CurrentSentLine);
         }
 
-        public void SetLedFrequency(double ledFrequency)
-        {
+
+        public void SetGoalTemperature(double goalTemperature) {
+            _goalTemperature = goalTemperature;
+
             // Send command to start sending data
-            var command = new SendCommand((int)Command.SetLedFrequency,ledFrequency);
+            var command = new SendCommand((int)Command.SetGoalTemperature, _goalTemperature);
 
             // Send command
-           // _cmdMessenger.QueueCommand(command);
+            //_cmdMessenger.QueueCommand(command);
             _cmdMessenger.QueueCommand(new CollapseCommandStrategy(command));
         }
 
-        public void SetLedState(bool ledState)
-        {
-            // Send command to start sending data
-            var command = new SendCommand((int)Command.SetLed, ledState);
-
-            // Send command
-            _cmdMessenger.SendCommand(command);
-            
-        }
     }
 }

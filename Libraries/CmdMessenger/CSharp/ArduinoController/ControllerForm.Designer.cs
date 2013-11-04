@@ -7,18 +7,7 @@
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
-            base.Dispose(disposing);
-        }
+
 
         #region Windows Form Designer generated code
 
@@ -52,11 +41,12 @@
             // LedFrequencyLabelTrackBar
             // 
             this.LedFrequencyLabelTrackBar.Location = new System.Drawing.Point(90, 35);
-            this.LedFrequencyLabelTrackBar.Maximum = 24;
+            this.LedFrequencyLabelTrackBar.Maximum = 240;
             this.LedFrequencyLabelTrackBar.Name = "LedFrequencyLabelTrackBar";
             this.LedFrequencyLabelTrackBar.Size = new System.Drawing.Size(208, 45);
             this.LedFrequencyLabelTrackBar.TabIndex = 1;
             this.LedFrequencyLabelTrackBar.Tag = "";
+            this.LedFrequencyLabelTrackBar.TickFrequency = 10;
             this.LedFrequencyLabelTrackBar.Scroll += new System.EventHandler(this.LedFrequencyTrackBarScroll);
             this.LedFrequencyLabelTrackBar.ValueChanged += new System.EventHandler(this.LedFrequencyLabelTrackBarValueChanged);
             // 
