@@ -1,10 +1,13 @@
-﻿// *** DataLogging ***
+﻿// *** ArduinoController ***
 
-// This example expands the previous SendandReceiveArguments example. The PC will now send a start command to the Arduino,
-// and wait for a response from the Arduino. The Arduino will start sending analog data which the PC will plot in a chart
+// This example expands the SendandReceiveArguments example. The PC will now sends commands to the Arduino when the trackbar 
+// is pulled. Every TrackBarChanged events will queue a message to the Arduino to set the blink speed of the 
+// internal / pin 13 LED
 // This example shows how to :
 // - use in combination with WinForms
 // - use in combination with ZedGraph
+// - send queued commands
+// - Use CollapseCommandStrategy
 
 using System;
 using CommandMessenger;
@@ -14,10 +17,10 @@ namespace ArduinoController
 {
     enum Command
     {
-        Acknowledge,
-        Error,
-        SetLed,
-        SetLedFrequency,
+        Acknowledge,            // Command to acknowledge a received command
+        Error,                  // Command to message that an error has occurred
+        SetLed,                 // Command to turn led ON or OFF
+        SetLedFrequency,        // Command to set led blink frequency
     };
 
     public class ArduinoController
@@ -25,7 +28,7 @@ namespace ArduinoController
         // This class (kind of) contains presentation logic, and domain model.
         // ChartForm.cs contains the view components 
 
-        private SerialTransport    _serialTransport;
+        private SerialTransport   _serialTransport;
         private CmdMessenger      _cmdMessenger;
         private ControllerForm    _controllerForm;
 
@@ -43,6 +46,7 @@ namespace ArduinoController
                 CurrentSerialSettings = { PortName = "COM6", BaudRate = 115200 } // object initializer
             };
 
+            // Initialize the command messenger with the Serial Port transport layer
             _cmdMessenger = new CmdMessenger(_serialTransport);
 
             // Tell CmdMessenger to "Invoke" commands on the thread running the WinForms UI
@@ -118,24 +122,31 @@ namespace ArduinoController
             Console.WriteLine(@" Sent > " + _cmdMessenger.CurrentSentLine);
         }
 
+        // Sent command to change led blinking frequency
         public void SetLedFrequency(double ledFrequency)
         {
-            // Send command to start sending data
+            // Create command to start sending data
             var command = new SendCommand((int)Command.SetLedFrequency,ledFrequency);
 
-            // Send command
-           // _cmdMessenger.QueueCommand(command);
+            // Put the command on the queue and wrap it in a collapse command strategy
+            // This strategy will avoid duplicates of this certain command on the queue: if a SetLedFrequency command is
+            // already on the queue when a new one is added, it will be replaced at its current queue-position. 
+            // Otherwise the command will be added to the back of the queue. 
+            // 
+            // This will make sure that when the slider raises a lot of events that each send a new blink frequency, the 
+            // embedded controller will not start lagging.
             _cmdMessenger.QueueCommand(new CollapseCommandStrategy(command));
         }
 
+
+        // Sent command to change led on/of state
         public void SetLedState(bool ledState)
         {
-            // Send command to start sending data
+            // Create command to start sending data
             var command = new SendCommand((int)Command.SetLed, ledState);
 
             // Send command
-            _cmdMessenger.SendCommand(command);
-            
+            _cmdMessenger.SendCommand(new SendCommand((int)Command.SetLed, ledState));         
         }
     }
 }
