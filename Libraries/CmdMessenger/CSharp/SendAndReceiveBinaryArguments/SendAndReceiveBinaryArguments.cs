@@ -37,7 +37,7 @@ namespace SendAndReceiveBinaryArguments
         long _endTime;                                          // End time, last item of sequence received 
         private bool _receivePlainTextFloatSeriesFinished;      // Indicates if plain text float series has been fully received
         private bool _receiveBinaryFloatSeriesFinished;         // Indicates if binary float series has been fully received
-        const int SeriesLength = 1000;                          // Number of items we like to receive from the Arduino
+        const int SeriesLength = 10;                            // Number of items we like to receive from the Arduino
         private const float SeriesBase = 1111111.111111F;       // Base of values to return: SeriesBase * (0..SeriesLength-1)
 
         // ------------------ M A I N  ----------------------
@@ -76,6 +76,7 @@ namespace SendAndReceiveBinaryArguments
             var commandBinary = new SendCommand((int)Command.RequestBinaryFloatSeries);
             commandBinary.AddBinArgument((UInt16)SeriesLength);
             commandBinary.AddBinArgument(SeriesBase);
+            
             // Send command 
             _cmdMessenger.SendCommand(commandBinary);
 
@@ -125,7 +126,7 @@ namespace SendAndReceiveBinaryArguments
         // Callback function To receive the plain text float series from the Arduino
         void OnReceivePlainTextFloatSeries(ReceivedCommand arguments)
         {
-           if (_receivedPlainTextCount % 100 == 0)
+            if (_receivedPlainTextCount % (SeriesLength/10) == 0)
                 Console.WriteLine("Received value: {0}",arguments.ReadFloatArg());
             if (_receivedPlainTextCount == 0)
             {
@@ -145,7 +146,7 @@ namespace SendAndReceiveBinaryArguments
         // Callback function To receive the binary float series from the Arduino
         void OnReceiveBinaryFloatSeries(ReceivedCommand arguments)
         {
-           if (_receivedBinaryCount % 100 == 0)
+            if (_receivedBinaryCount % (SeriesLength / 10) == 0)
                     Console.WriteLine("Received value: {0}", arguments.ReadBinFloatArg());
             if (_receivedBinaryCount == 0)
             {

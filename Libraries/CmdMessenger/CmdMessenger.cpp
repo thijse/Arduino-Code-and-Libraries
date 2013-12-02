@@ -24,6 +24,10 @@
     CmdMessenger Version 1    - Neil Dudman.
     CmdMessenger Version 2    - Dreamcat4.
 	CmdMessenger Version 3    - Thijs Elenbaas.
+	  3.3  - Fixed warnings
+	       - Some code optimization
+	  3.2  - Small fixes and sending long argument support
+	  3.1  - Added examples
 	  3.0  - Bugfixes on 2.2
 	       - Wait for acknowlegde
 		   - Sending of common type arguments (float, int, char)
@@ -39,7 +43,7 @@ extern "C" {
 #include <stdio.h>
 #include <CmdMessenger.h>
 
-#define _CMDMESSENGER_VERSION 3_2 // software version of this library
+#define _CMDMESSENGER_VERSION 3_3 // software version of this library
 
 // **** Initialization **** 
 
@@ -116,23 +120,26 @@ void CmdMessenger::attach(byte msgId, messengerCallbackFunction newFunction)
  */
 void CmdMessenger::feedinSerialData()
 {
-    while ( !pauseProcessing && comms->available( ) )
-        processAndCallBack(comms->read( ) );
-}
+    while ( !pauseProcessing && comms->available() )
+	{	   
+		// The Stream class has a readBytes() function that reads many bytes at once. On Teensy 2.0 and 3.0, readBytes() is optimized. 
+		// Benchmarks about the incredible difference it makes: http://www.pjrc.com/teensy/benchmark_usb_serial_receive.html
 
-/**
- * Processes a byte stream, and handles dispatches callbacks, if commands are received
- */
-uint8_t CmdMessenger::processAndCallBack(int serialByte)
-{
-    int messageState = processLine(serialByte);
+		int bytesAvailable = min(comms->available(),MAXSTREAMBUFFERSIZE);
+		comms->readBytes(streamBuffer, bytesAvailable); 
+		
+		// Process the bytes in the stream buffer, and handles dispatches callbacks, if commands are received
+		for (int byteNo = 0; byteNo < bytesAvailable ; byteNo++) 
+		{   
+		    int messageState = processLine(streamBuffer[byteNo]);
 
-    // If waiting for acknowledge command
-    if ( messageState == kEndOfMessage ) 
-	{
-        handleMessage();
-    }
-    return messageState;
+			// If waiting for acknowledge command
+			if ( messageState == kEndOfMessage ) 
+			{
+				handleMessage();
+			}
+		}
+	}
 }
 
 /**
@@ -143,18 +150,17 @@ uint8_t CmdMessenger::processLine(int serialByte)
     messageState = kProccesingMessage;
     char serialChar = (char)serialByte;
     bool escaped = isEscaped(&serialChar,escape_character,&CmdlastChar);
-//	*comms << "1, " << (int) serialChar << " ;";
     if (serialByte > 0 || escaped) {
         if((serialChar == command_separator) && !escaped) {
-            buffer[bufferIndex]=0;
+            commandBuffer[bufferIndex]=0;
             if(bufferIndex > 0) {
                 messageState = kEndOfMessage;
-                current = buffer;
+                current = commandBuffer;
                 CmdlastChar='\0';
             }
             reset();
         } else {
-            buffer[bufferIndex]=serialByte;
+            commandBuffer[bufferIndex]=serialByte;
             bufferIndex++;
             if (bufferIndex >= bufferLastIndex) reset();
         }
@@ -196,30 +202,23 @@ bool CmdMessenger::blockedTillReply(unsigned long timeout, int ackCmdId)
  */
 bool CmdMessenger::CheckForAck(int AckCommand)
 {
-    while (  comms->available( ) ) {
-        return processAndWaitForAck(comms->read( ), AckCommand );
+    while (  comms->available() ) {
+		//Processes a byte and determines if an acknowlegde has come in
+	    //*comms << "1, processAndWaitForAck,";
+		int messageState = processLine(comms->read());
+		if ( messageState == kEndOfMessage ) {
+			int id = readIntArg();
+			if (AckCommand==id && ArgOk) {
+				//*comms << " matched! ;" << endl;
+				return true;
+			} else {
+				//*comms << " unmatched;" << endl;
+				return false;
+			}
+		}
+		//*comms << "No command;" << endl;
+		return false;
     }
-    return false;
-}
-
-/**
- * Processes a byte and determines if an acknowlegde has come in
- */
-bool CmdMessenger::processAndWaitForAck(int serialByte, int AckCommand)
-{
-    //*comms << "1, processAndWaitForAck,";
-    int messageState = processLine(serialByte);
-    if ( messageState == kEndOfMessage ) {
-        int id = readIntArg();
-        if (AckCommand==id && ArgOk) {
-            //*comms << " matched! ;" << endl;
-            return true;
-        } else {
-            //*comms << " unmatched;" << endl;
-            return false;
-        }
-    }
-    //*comms << "No command;" << endl;
     return false;
 }
 
@@ -234,7 +233,7 @@ bool CmdMessenger::next()
     case kProccesingMessage:
         return false;
     case kEndOfMessage:
-        temppointer = buffer;
+        temppointer = commandBuffer;
         messageState = kProcessingArguments;
     default:
         if (dumped)
