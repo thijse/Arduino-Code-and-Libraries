@@ -3,11 +3,12 @@
 // This example expands the SendandReceiveArguments example. The PC will now sends commands to the Arduino when the trackbar 
 // is pulled. Every TrackBarChanged events will queue a message to the Arduino to set the blink speed of the 
 // internal / pin 13 LED
+// 
 // This example shows how to :
 // - use in combination with WinForms
 // - use in combination with ZedGraph
 // - send queued commands
-// - Use CollapseCommandStrategy
+// - Use the CollapseCommandStrategy
 
 using System;
 using CommandMessenger;

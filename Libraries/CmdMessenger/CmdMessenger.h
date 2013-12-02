@@ -97,7 +97,7 @@ private:
   uint8_t processLine (int serialByte);
   void handleMessage ();
 
-  bool blockedTillReply (int timeout = DEFAULT_TIMEOUT, int ackCmdId = 1);
+  bool blockedTillReply (unsigned long timeout = DEFAULT_TIMEOUT, int ackCmdId = 1);
   bool CheckForAck (int AckCommand);
   bool processAndWaitForAck (int serialByte, int AckCommand);
 
@@ -183,6 +183,7 @@ public:
 		sendCmdArg (arg);
 		return sendCmdEnd (reqAc, ackCmdId, timeout);
 	}
+	return false;
   }
   
   /**
@@ -198,6 +199,7 @@ public:
 		sendCmdBinArg (arg);
 		return sendCmdEnd (reqAc, ackCmdId, timeout);
 	}
+	return false;
   }
 
   // **** Command sending with multiple arguments ****
@@ -252,7 +254,7 @@ public:
   long readLongArg ();
   char readCharArg ();
   float readFloatArg ();
-  char *readStringArg ();
+  const char *readStringArg ();
   void copyStringArg (char *string, uint8_t size);
   uint8_t compareStringArg (char *string);
  

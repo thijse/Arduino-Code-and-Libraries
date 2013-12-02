@@ -38,9 +38,8 @@ extern "C" {
 }
 #include <stdio.h>
 #include <CmdMessenger.h>
-#include <Streaming.h>
 
-#define _CMDMESSENGER_VERSION 3_0 // software version of this library
+#define _CMDMESSENGER_VERSION 3_2 // software version of this library
 
 // **** Initialization **** 
 
@@ -180,7 +179,7 @@ void CmdMessenger::handleMessage()
 /**
  * Waits for reply from sender or timeout before continuing
  */
-bool CmdMessenger::blockedTillReply(int timeout, int ackCmdId)
+bool CmdMessenger::blockedTillReply(unsigned long timeout, int ackCmdId)
 {
     unsigned long time  = millis();
     unsigned long start = time;
@@ -325,8 +324,6 @@ bool CmdMessenger::sendCmdEnd(bool reqAc, int ackCmdId, int timeout)
         comms->print(command_separator);
         if(print_newlines)
             comms->println(); // should append BOTH \r\n
-        int tryCount = 0;
-
         if (reqAc) {
             ackReply = blockedTillReply(timeout, ackCmdId);
         }
@@ -427,7 +424,7 @@ float CmdMessenger::readFloatArg()
  * Read next argument as string.
  * Note that the String is valid until the current command is replaced
  */
-char* CmdMessenger::readStringArg()
+const char* CmdMessenger::readStringArg()
 {
     if (next()) {
         dumped = true;
@@ -469,6 +466,7 @@ uint8_t CmdMessenger::compareStringArg(char *string)
             return 0;
         }
     }
+	return 0;
 }
 
 // **** Escaping tools ****
