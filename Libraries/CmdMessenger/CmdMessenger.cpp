@@ -423,7 +423,7 @@ float CmdMessenger::readFloatArg()
  * Read next argument as string.
  * Note that the String is valid until the current command is replaced
  */
-const char* CmdMessenger::readStringArg()
+char* CmdMessenger::readStringArg()
 {
     if (next()) {
         dumped = true;
@@ -431,7 +431,7 @@ const char* CmdMessenger::readStringArg()
         return current;
     }
 	ArgOk  = false;
-    return "\0";
+    return '\0';
 }
 
 /**

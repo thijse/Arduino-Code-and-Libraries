@@ -252,7 +252,7 @@ public:
   long readLongArg ();
   char readCharArg ();
   float readFloatArg ();
-  const char *readStringArg ();
+  char *readStringArg ();
   void copyStringArg (char *string, uint8_t size);
   uint8_t compareStringArg (char *string);
  
@@ -266,6 +266,7 @@ public:
         dumped = true;
         return readBin < T > (current);
       }
+	  return (T)0;
   }
 
   // **** Escaping tools ****
