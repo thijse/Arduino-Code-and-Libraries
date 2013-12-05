@@ -2,7 +2,7 @@ echo off
 pushd.
 cd /d  %~dp0
 
-set SOURCE=..\..\Arduino-Libraries\zippedlibs\CmdMessenger
+set SOURCE=..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger
 set TARGET=C:\Users\nly96630\Documents\Arduino
 
 

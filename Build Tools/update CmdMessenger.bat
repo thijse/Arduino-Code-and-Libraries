@@ -1,4 +1,4 @@
-@echo off
+rem @echo off
 
 set version=3.3
 
@@ -50,13 +50,14 @@ del "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger %version%.tar.gz"
 
 7za.exe a -tzip "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger %version%.zip" "..\..\Arduino-Libraries\CmdMessenger"
 7za.exe a -tzip "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger %version%.zip" "..\..\Arduino-Libraries\TemperatureController"
-7za.exe a -tzip "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger %version%.zip" "..\..\Arduino-Code-and-Libraries\Adafruit_MAX31855"
-7za.exe a -tzip "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger %version%.zip" "..\..\Arduino-Code-and-Libraries\PID_v1"
+7za.exe a -tzip "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger %version%.zip" "..\..\Arduino-Code-and-Libraries\Libraries\Adafruit_MAX31855"
+7za.exe a -tzip "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger %version%.zip" "..\..\Arduino-Code-and-Libraries\Libraries\PID_v1"
 
 7za.exe a -ttar "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger" "..\..\Arduino-Libraries\CmdMessenger"
 7za.exe a -ttar "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger" "..\..\Arduino-Libraries\TemperatureController"
-7za.exe a -ttar "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger" "..\..\Arduino-Code-and-Libraries\Adafruit_MAX31855"
-7za.exe a -ttar "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger" "..\..\Arduino-Code-and-Libraries\PID_v1"
+7za.exe a -ttar "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger" "..\..\Arduino-Code-and-Libraries\Libraries\Adafruit_MAX31855"
+7za.exe a -ttar "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger" "..\..\Arduino-Code-and-Libraries\Libraries\PID_v1"
+
 
 7za.exe a -tgzip "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger %version%.tar.gz" "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger.tar"
 del "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger.tar"
@@ -66,6 +67,7 @@ echo Create Arduino working library only for CmdMessenger
 rmdir "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger" /s /q 
 mkdir "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger" 
 mkdir "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger\Libraries" 
+
 
 7za.exe x -y -o"..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger\Libraries" "..\..\Arduino-Libraries\Packaged Libraries\CmdMessenger %version%.zip" 
 

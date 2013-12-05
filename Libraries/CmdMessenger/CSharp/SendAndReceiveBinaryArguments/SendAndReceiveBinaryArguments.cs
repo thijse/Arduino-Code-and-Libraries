@@ -75,7 +75,8 @@ namespace SendAndReceiveBinaryArguments
             // Send command requesting a series of 100 float values send in plain text
             var commandBinary = new SendCommand((int)Command.RequestBinaryFloatSeries);
             commandBinary.AddBinArgument((UInt16)SeriesLength);
-            commandBinary.AddBinArgument(SeriesBase);
+            //commandBinary.AddBinArgument((Single)SeriesBase); // Due to a bug, receiving a second binary command on the embedded sys does not seem to work
+            commandBinary.AddArgument(SeriesBase);
             
             // Send command 
             _cmdMessenger.SendCommand(commandBinary);
