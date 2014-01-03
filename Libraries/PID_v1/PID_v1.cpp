@@ -62,15 +62,15 @@ bool PID::Compute()
       /*Compute PID Output*/
       double output = kp * error + ITerm- kd * dInput;
       
-	  Serial.print("0,PID,");
-	  Serial.print(input,5);
-	  Serial.print(",");
-	  Serial.print(*mySetpoint,5);
-	  Serial.print(",");
-	  Serial.print(error,5);
-	  Serial.print(",");
-	  Serial.print(ITerm,5);
-	  Serial.print(";");
+	  // Serial.print("0,PID,");
+	  // Serial.print(input,5);
+	  // Serial.print(",");
+	  // Serial.print(*mySetpoint,5);
+	  // Serial.print(",");
+	  // Serial.print(error,5);
+	  // Serial.print(",");
+	  // Serial.print(ITerm,5);
+	  // Serial.print(";");
 	  
 	  if(output > outMax) output = outMax;
       else if(output < outMin) output = outMin;

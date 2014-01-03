@@ -204,19 +204,15 @@ bool CmdMessenger::CheckForAck(int AckCommand)
 {
     while (  comms->available() ) {
 		//Processes a byte and determines if an acknowlegde has come in
-	    //*comms << "1, processAndWaitForAck,";
 		int messageState = processLine(comms->read());
 		if ( messageState == kEndOfMessage ) {
 			int id = readIntArg();
 			if (AckCommand==id && ArgOk) {
-				//*comms << " matched! ;" << endl;
 				return true;
 			} else {
-				//*comms << " unmatched;" << endl;
 				return false;
 			}
 		}
-		//*comms << "No command;" << endl;
 		return false;
     }
     return false;
