@@ -1,6 +1,6 @@
 rem @echo off
 
-set version=3.4
+set version=3.5
 
 echo copy library
 
