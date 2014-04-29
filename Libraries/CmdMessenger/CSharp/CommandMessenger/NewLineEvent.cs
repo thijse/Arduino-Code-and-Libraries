@@ -1,4 +1,4 @@
-﻿#region CmdMessenger - MIT - (c) 2013 Thijs Elenbaas.
+﻿#region CmdMessenger - MIT - (c) 2014 Thijs Elenbaas.
 /*
   CmdMessenger - library that provides command based messaging
 
@@ -13,22 +13,24 @@
   The above copyright notice and this permission notice shall be
   included in all copies or substantial portions of the Software.
 
-  Copyright 2013 - Thijs Elenbaas
+  Copyright 2014 - Thijs Elenbaas
 */
 #endregion
-
 using System;
-namespace CommandMessenger.TransportLayer
+
+namespace CommandMessenger
 {
-    /// <summary> Interface for transport layer.  </summary>
-    public interface ITransport
+    public class NewLineEvent
     {
-        int BytesInBuffer();
-        byte[] Read();
-        bool StartListening();
-        bool StopListening();
-        bool IsConnected();
-        void Write(byte[] buffer);
-        event EventHandler NewDataReceived; 
+        public delegate void NewLineHandler(object sender, NewLineArgs e);
+
+        public class NewLineArgs : EventArgs
+        {
+            public Command Command { get; private set; }
+            public NewLineArgs(Command command)
+            {
+                Command = command;
+            }
+        }
     }
 }

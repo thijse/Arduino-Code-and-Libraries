@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("DataLogging")]
+[assembly: AssemblyTitle("CommandMessengerTests")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-
-[assembly: AssemblyProduct("DataLogging")]
-[assembly: AssemblyCopyright("Copyright © Thijs Elenbaas 2013,2014")]
+[assembly: AssemblyCompany("Philips Healthcare")]
+[assembly: AssemblyProduct("CommandMessengerTests")]
+[assembly: AssemblyCopyright("Copyright © Philips Healthcare 2013")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("7896e467-386e-471d-8856-518594d0588f")]
+[assembly: Guid("3e948731-3f90-4c91-8e5b-574879664de1")]
 
 // Version information for an assembly consists of the following four values:
 //

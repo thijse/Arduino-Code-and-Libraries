@@ -42,13 +42,18 @@ namespace DataLogging
             _chartForm.SetupChart();
 
             // Create Serial Port object
+            // Note that for some boards (e.g. Sparkfun Pro Micro) DtrEnable may need to be true.
             _serialTransport = new SerialTransport
             {
-                CurrentSerialSettings = { PortName = "COM6", BaudRate = 115200 } // object initializer
+                CurrentSerialSettings = { PortName = "COM15", BaudRate = 115200, DtrEnable = false } // object initializer
             };
 
+
             // Initialize the command messenger with the Serial Port transport layer
-            _cmdMessenger = new CmdMessenger(_serialTransport);
+            _cmdMessenger = new CmdMessenger(_serialTransport)
+            {
+                BoardType = BoardType.Bit16 // Set if it is communicating with a 16- or 32-bit Arduino board
+            };
 
             // Tell CmdMessenger to "Invoke" commands on the thread running the WinForms UI
             _cmdMessenger.SetControlToInvokeOn(chartForm);

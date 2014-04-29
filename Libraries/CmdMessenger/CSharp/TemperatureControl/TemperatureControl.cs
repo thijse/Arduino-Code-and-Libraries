@@ -43,7 +43,7 @@ namespace DataLogging
             get { return _goalTemperature; }
             set
             {
-                if (_goalTemperature != value)
+                if (Math.Abs(_goalTemperature - value) > float.Epsilon)
                 {
                     _goalTemperature = value;
                     SetGoalTemperature(_goalTemperature);
@@ -64,16 +64,20 @@ namespace DataLogging
             _chartForm.SetupChart();
 
             // Connect slider to GoalTemperatureChanged
-            GoalTemperatureChanged += new Action(() => _chartForm.GoalTemperatureTrackBarScroll(null, null));
+            GoalTemperatureChanged += () => _chartForm.GoalTemperatureTrackBarScroll(null, null);
 
             // Create Serial Port object
+            // Note that for some boards (e.g. Sparkfun Pro Micro) DtrEnable may need to be true.
             _serialTransport = new SerialTransport
             {
-                CurrentSerialSettings = { PortName = "COM6", BaudRate = 115200 } // object initializer
+                CurrentSerialSettings = { PortName = "COM15", BaudRate = 115200, DtrEnable = false } // object initializer
             };
 
             // Initialize the command messenger with the Serial Port transport layer
-            _cmdMessenger = new CmdMessenger(_serialTransport);
+            _cmdMessenger = new CmdMessenger(_serialTransport)
+            {
+                BoardType = BoardType.Bit16 // Set if it is communicating with a 16- or 32-bit Arduino board
+            };
 
             // Tell CmdMessenger to "Invoke" commands on the thread running the WinForms UI
             _cmdMessenger.SetControlToInvokeOn(chartForm);
@@ -166,15 +170,16 @@ namespace DataLogging
         }
 
         // Log received line to console
-        private void NewLineReceived(object sender, EventArgs e)
+        private void NewLineReceived(object sender, NewLineEvent.NewLineArgs e)
         {
-            Console.WriteLine(@" Received > " + _cmdMessenger.CurrentReceivedLine);
+            Console.WriteLine(@"Received > " + e.Command.CommandString());
         }
 
         // Log sent line to console
-        private void NewLineSent(object sender, EventArgs e)
+        private void NewLineSent(object sender, NewLineEvent.NewLineArgs e)
         {
-            Console.WriteLine(@" Sent > " + _cmdMessenger.CurrentSentLine);
+            //// Log data to text box
+            Console.WriteLine(@"Sent > " + e.Command.CommandString());
         }
 
         // Set the goal temperature on the embedded controller
