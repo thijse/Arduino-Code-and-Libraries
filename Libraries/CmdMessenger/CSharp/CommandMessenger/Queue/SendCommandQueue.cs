@@ -18,6 +18,7 @@
 #endregion
 
 using System;
+using System.Threading;
 
 namespace CommandMessenger
 {
@@ -27,20 +28,26 @@ namespace CommandMessenger
         private readonly Sender _sender;
         public event NewLineEvent.NewLineHandler NewLineSent;
         private readonly QueueSpeed _queueSpeed = new QueueSpeed(0.5,5);
-        private const int SendBufferMaxLength = 512;
+        //private const int _sendBufferMaxLength = 512;
+        private int _sendBufferMaxLength = 62;
         string _sendBuffer = "";
         int _commandCount = 0;
+
+        public uint MaxQueueLength { get; set; }
+
 
         /// <summary> send command queue constructor. </summary>
         /// <param name="disposeStack"> DisposeStack. </param>
         /// <param name="cmdMessenger"> The command messenger. </param>
         /// <param name="sender">Object that does the actual sending of the command</param>
-        public SendCommandQueue(DisposeStack disposeStack, CmdMessenger cmdMessenger, Sender sender)
+        public SendCommandQueue(DisposeStack disposeStack, CmdMessenger cmdMessenger, Sender sender, int sendBufferMaxLength)
             : base(disposeStack, cmdMessenger)
         {
+            MaxQueueLength = 5000;
             QueueThread.Name = "SendCommandQueue";
             _sender = sender;
-           // _queueSpeed.Name = "SendCommandQueue";            
+            _sendBufferMaxLength = sendBufferMaxLength;
+            // _queueSpeed.Name = "SendCommandQueue";            
         }
 
         /// <summary> Process the queue. </summary>
@@ -76,7 +83,7 @@ namespace CommandMessenger
             _sendBuffer = "";
             CommandStrategy eventCommandStrategy = null;
 
-            while (_sendBuffer.Length < SendBufferMaxLength  && Queue.Count != 0)         // while maximum buffer string is not reached, and command in queue, AND    
+            while (_sendBuffer.Length < _sendBufferMaxLength  && Queue.Count != 0)         // while maximum buffer string is not reached, and command in queue, AND    
             {
                 lock (Queue)
                 {
@@ -105,6 +112,12 @@ namespace CommandMessenger
                         
                     }
                 }
+                // event callback outside lock for performance
+                if (eventCommandStrategy != null)
+                {
+                    if (NewLineSent != null) NewLineSent(this, new NewLineEvent.NewLineArgs(eventCommandStrategy.Command));
+                    eventCommandStrategy = null;
+                }
             }
 
             // Now check if a command string has been filled
@@ -113,12 +126,7 @@ namespace CommandMessenger
                 _sender.ExecuteSendString(_sendBuffer, ClearQueue.KeepQueue);              
             }
 
-            // event callback outside lock for performance
-            if (eventCommandStrategy != null)
-            {
-                if (NewLineSent != null) NewLineSent(this, new NewLineEvent.NewLineArgs(eventCommandStrategy.Command));
-                eventCommandStrategy = null;
-            }
+
         }
 
         /// <summary> Sends a float command from the queue. </summary>
@@ -177,7 +185,10 @@ namespace CommandMessenger
         /// <param name="commandStrategy"> The command strategy. </param>
         public override void QueueCommand(CommandStrategy commandStrategy)
         {
-            
+            while (Queue.Count > MaxQueueLength)
+            {
+                Thread.Sleep(1);
+            }
             lock (Queue)
             {
                 // Process commandStrategy enqueue associated with command

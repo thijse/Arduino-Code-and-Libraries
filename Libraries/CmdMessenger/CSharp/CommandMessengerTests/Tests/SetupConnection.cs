@@ -8,12 +8,12 @@ namespace CommandMessengerTests
     public class SetupConnection
     {
         readonly Enumerator _command;
-        private readonly TestPlatform _testPlatform;
+        private readonly systemSettings _systemSettings;
         private CmdMessenger _cmdMessenger;
 
-        public SetupConnection(TestPlatform testPlatform, Enumerator command)
+        public SetupConnection(systemSettings systemSettings, Enumerator command)
         {
-            _testPlatform = testPlatform;            
+            _systemSettings = systemSettings;            
             _command = command;
             DefineCommands();
         }
@@ -45,12 +45,10 @@ namespace CommandMessengerTests
 
         public void TestOpenConnection()
         {
-
             Common.StartTest("Test opening connection");
-
             try
             {
-                _cmdMessenger = Common.Connect(_testPlatform);           
+                _cmdMessenger = Common.Connect(_systemSettings);           
                 AttachCommandCallBacks();
             }
             catch (Exception)
@@ -60,7 +58,7 @@ namespace CommandMessengerTests
                 return;
             }
 
-            if (_testPlatform.Transport.IsConnected())
+            if (_systemSettings.Transport.IsConnected())
             {
                 Common.TestOk("No issues during opening connection");
             }
@@ -87,7 +85,7 @@ namespace CommandMessengerTests
             }
             Console.WriteLine("No issues during closing of connection");
 
-            if (_testPlatform.Transport.IsConnected())
+            if (_systemSettings.Transport.IsConnected())
             {
                 Common.TestNotOk("Transport connection still open after disconnection");
             }
@@ -98,7 +96,6 @@ namespace CommandMessengerTests
 
             Common.EndTest();
         }
-
 
         // Test: send a command without acknowledgment needed
         public void TestSendCommand()

@@ -47,7 +47,6 @@
     <Compile Include="CommunicationManager.cs" />
     <Compile Include="DisposableObject.cs" />
     <Compile Include="DisposeStack.cs" />
-    <Compile Include="DoubleConverter.cs" />
     <Compile Include="NewLineEvent.cs" />
     <Compile Include="Queue\CollapseCommandStrategy.cs" />
     <Compile Include="Queue\CommandQueue.cs" />

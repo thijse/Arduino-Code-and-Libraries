@@ -18,14 +18,13 @@ namespace CommandMessengerTests
         long _endTime;                                          // End time, last item of sequence received 
         private volatile bool _receiveSeriesFinished;           // Indicates if plain text float series has been fully received
         private volatile bool _sendSeriesFinished;
-        private readonly TestPlatform _testPlatform;
+        private readonly systemSettings _systemSettings;
         const int SeriesLength = 10000;                         // Number of items we like to receive from the Arduino
         private const float SeriesBase = 1.00001F;              // Base of values to return: SeriesBase * (0..SeriesLength-1)
         private float _minimalBps;
-        public TransferSpeed(TestPlatform testPlatform, Enumerator command)
+        public TransferSpeed(systemSettings systemSettings, Enumerator command)
         {
-            //_transport = testPlatform.Transport;
-            _testPlatform = testPlatform;
+            _systemSettings = systemSettings;
             _command = command;
             DefineCommands();
         }
@@ -91,7 +90,7 @@ namespace CommandMessengerTests
         {
             try
             {
-                _cmdMessenger = Common.Connect(_testPlatform);
+                _cmdMessenger = Common.Connect(_systemSettings);
                 AttachCommandCallBacks();
             }
             catch (Exception)
@@ -143,10 +142,9 @@ namespace CommandMessengerTests
             _receiveSeriesFinished = false;
             _receivedItemsCount = 0;
             _receivedBytesCount = 0;
-            _minimalBps = _testPlatform.MinReceiveSpeed;
+            _minimalBps = _systemSettings.MinReceiveSpeed;
 
-            // Send command requesting a series of 100 float values send in plain text form
-            //Console.WriteLine("\n\nBenchmark 1: receive plain text float");
+            // Send command requesting a series of 100 float values send in plain text form           
             var commandPlainText = new SendCommand(_command["RequestSeries"]);
             commandPlainText.AddArgument(SeriesLength);
             commandPlainText.AddArgument(SeriesBase);
@@ -183,11 +181,11 @@ namespace CommandMessengerTests
 
             if (bps > _minimalBps)
             {
-                Common.TestOk("Embedded system is sending data as fast as expected. Measured: " + bps + " bps, expected " + _minimalBps);
+                Common.TestOk("Embedded system is receiving data as fast as expected. Measured: " + bps + " bps, expected " + _minimalBps);
             }
             else
             {
-                Common.TestNotOk("Embedded system is sending data not as fast as expected. Measured: " + bps + " bps, expected " + _minimalBps);
+                Common.TestNotOk("Embedded system is receiving data not as fast as expected. Measured: " + bps + " bps, expected " + _minimalBps);
             }
 
 
@@ -240,7 +238,7 @@ namespace CommandMessengerTests
            // Console.WriteLine("\n\nBenchmark 2: send queued & combined plain text float");
             WaitAndClear();
 
-            _minimalBps = _testPlatform.MinSendSpeed;
+            _minimalBps = _systemSettings.MinSendSpeed;
             _sendSeriesFinished = false;
             var prepareSendSeries = new SendCommand(_command["PrepareSendSeries"]);
             prepareSendSeries.AddArgument(SeriesLength);
@@ -295,7 +293,7 @@ namespace CommandMessengerTests
             Common.StartTest("Calculating speed in individually sending a series of float data");
             WaitAndClear();
 
-            _minimalBps = _testPlatform.MinDirectSendSpeed; 
+            _minimalBps = _systemSettings.MinDirectSendSpeed; 
             _sendSeriesFinished = false;
 
             var prepareSendSeries = new SendCommand(_command["PrepareSendSeries"]);
@@ -306,7 +304,6 @@ namespace CommandMessengerTests
             _receivedBytesCount = 0;
             _cmdMessenger.PrintLfCr = true;
             _beginTime = Millis;
-            //Console.WriteLine("\n\nBenchmark 3: send individual plain text float");
             // Now send all commands individually.
             // This is not the preferred way to send, but is most direct.
             for (var sendItemsCount = 0; sendItemsCount < SeriesLength; sendItemsCount++)
@@ -325,16 +322,11 @@ namespace CommandMessengerTests
             }
 
             _endTime = Millis;
-            //var deltaTime = (_endTime - _beginTime);
             // Now wait until receiving party acknowledges that values have arrived
             while (!_sendSeriesFinished)
             {
                 Thread.Sleep(50);
             }
-
-            //CalcTransferSpeed();
-
-            //Common.EndTest();
         }
 
         // Tools

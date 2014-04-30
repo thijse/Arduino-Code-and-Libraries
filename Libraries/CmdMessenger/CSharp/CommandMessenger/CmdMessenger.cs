@@ -64,7 +64,7 @@ namespace CommandMessenger
         private SendCommandQueue _sendCommandQueue;                         // The queue of commands to be sent
         private ReceiveCommandQueue _receiveCommandQueue;                   // The queue of commands to be processed
 
-        private Logger _sendCommandLogger = new Logger(@"d:\sendCommands.txt");
+        //private Logger _sendCommandLogger = new Logger(@"d:\sendCommands.txt");
         /// <summary> Definition of the messenger callback function. </summary>
         /// <param name="receivedCommand"> The received command. </param>
         public delegate void MessengerCallbackFunction(ReceivedCommand receivedCommand);
@@ -100,33 +100,33 @@ namespace CommandMessenger
 
         /// <summary> Gets or sets the currently sent line. </summary>
         /// <value> The currently sent line. </value>
-        public String CurrentSentLine { get; private set; }
+        //public String CurrentSentLine { get; private set; }
 
         // Enable logging send commands to file
-        public bool LogSendCommandsEnabled
-        {
-            get { return _sendCommandLogger.isEnabled; }
-            set { 
-                _sendCommandLogger.isEnabled = value;
-                if  (!_sendCommandLogger.isOpen) {
-                    _sendCommandLogger.Open();
-                }
-            }
-        }
+        //public bool LogSendCommandsEnabled
+        //{
+        //    get { return _sendCommandLogger.isEnabled; }
+        //    set { 
+        //        _sendCommandLogger.isEnabled = value;
+        //        if  (!_sendCommandLogger.isOpen) {
+        //            _sendCommandLogger.Open();
+        //        }
+        //    }
+        //}
 
         /// <summary> Gets or sets the log file of send commands. </summary>
         /// <value> The logfile name for send commands. </value>
-        public String LogFileSendCommands
-        {
-            get { return _sendCommandLogger.LogFileName; }
-            set { _sendCommandLogger.LogFileName = value; }
-        }
+        //public String LogFileSendCommands
+        //{
+        //    get { return _sendCommandLogger.LogFileName; }
+        //    set { _sendCommandLogger.LogFileName = value; }
+        //}
 
    
 
         /// <summary> Gets or sets the log file of receive commands. </summary>
         /// <value> The logfile name for receive commands. </value>
-        public String LogFileReceiveCommands { get; set; }
+        //public String LogFileReceiveCommands { get; set; }
 
         // The control to invoke the callback on
         private Control _controlToInvokeOn;
@@ -137,7 +137,15 @@ namespace CommandMessenger
         /// <param name="transport"> The transport layer. </param>
         public CmdMessenger(ITransport transport)
         {
-            Init(transport, ',', ';', '/');
+            Init(transport, ',', ';', '/', 60);
+        }
+
+        /// <summary> Constructor. </summary>
+        /// <param name="transport"> The transport layer. </param>
+        /// <param name="sendBufferMaxLength"> The maximum size of the send buffer</param>
+        public CmdMessenger(ITransport transport, int sendBufferMaxLength)
+        {
+            Init(transport, ',', ';', '/', sendBufferMaxLength);
         }
 
         /// <summary> Constructor. </summary>
@@ -145,7 +153,16 @@ namespace CommandMessenger
         /// <param name="fieldSeparator"> The field separator. </param>
         public CmdMessenger(ITransport transport, char fieldSeparator)
         {
-            Init(transport, fieldSeparator, ';', '/');
+            Init(transport, fieldSeparator, ';', '/', 60);
+        }
+
+        /// <summary> Constructor. </summary>
+        /// <param name="transport"> The transport layer. </param>
+        /// <param name="fieldSeparator"> The field separator. </param>
+        /// <param name="sendBufferMaxLength"> The maximunm size of the send buffer</param>
+        public CmdMessenger(ITransport transport, char fieldSeparator, int sendBufferMaxLength)
+        {
+            Init(transport, fieldSeparator, ';', '/', sendBufferMaxLength);
         }
 
         /// <summary> Constructor. </summary>
@@ -154,7 +171,7 @@ namespace CommandMessenger
         /// <param name="commandSeparator"> The command separator. </param>
         public CmdMessenger(ITransport transport, char fieldSeparator, char commandSeparator)
         {
-            Init(transport, fieldSeparator, commandSeparator, commandSeparator);
+            Init(transport, fieldSeparator, commandSeparator, commandSeparator, 60);
         }
 
         /// <summary> Constructor. </summary>
@@ -162,10 +179,11 @@ namespace CommandMessenger
         /// <param name="fieldSeparator">   The field separator. </param>
         /// <param name="commandSeparator"> The command separator. </param>
         /// <param name="escapeCharacter">  The escape character. </param>
+        /// <param name="sendBufferMaxLength"> The maximunm size of the send buffer</param>
         public CmdMessenger(ITransport transport, char fieldSeparator, char commandSeparator,
-                            char escapeCharacter)
+                            char escapeCharacter, int sendBufferMaxLength)
         {
-            Init(transport, fieldSeparator, commandSeparator, escapeCharacter);
+            Init(transport, fieldSeparator, commandSeparator, escapeCharacter, sendBufferMaxLength);
         }
 
         /// <summary> Initialises this object. </summary>
@@ -174,15 +192,14 @@ namespace CommandMessenger
         /// <param name="commandSeparator"> The command separator. </param>
         /// <param name="escapeCharacter">  The escape character. </param>
         private void Init(ITransport transport, char fieldSeparator, char commandSeparator,
-                          char escapeCharacter)
+                          char escapeCharacter, int sendBufferMaxLength)
         {           
             _controlToInvokeOn = null;
-
             
             _receiveCommandQueue  = new ReceiveCommandQueue(DisposeStack, this);
             _communicationManager = new CommunicationManager(DisposeStack, transport, _receiveCommandQueue, commandSeparator, fieldSeparator, escapeCharacter);
             _sender               = new Sender(_communicationManager, _receiveCommandQueue);
-            _sendCommandQueue     = new SendCommandQueue(DisposeStack, this, _sender);
+            _sendCommandQueue     = new SendCommandQueue(DisposeStack, this, _sender, sendBufferMaxLength);
            
             _receiveCommandQueue.NewLineReceived += new NewLineEvent.NewLineHandler((o, e) => InvokeNewLineEvent(NewLineReceived, e));
             _sendCommandQueue.NewLineSent        += new NewLineEvent.NewLineHandler((o, e) => InvokeNewLineEvent(NewLineSent, e));
@@ -197,7 +214,7 @@ namespace CommandMessenger
 
             Escaping.EscapeChars(_fieldSeparator, _commandSeparator, escapeCharacter);
             _callbackList = new Dictionary<int, MessengerCallbackFunction>();
-            CurrentSentLine = "";
+            //CurrentSentLine = "";
             CurrentReceivedLine = "";
         }
 
@@ -334,7 +351,7 @@ namespace CommandMessenger
         /// <returns> A received command. The received command will only be valid if the ReqAc of the command is true. </returns>
         public ReceivedCommand SendCommand(SendCommand sendCommand, ClearQueue clearQueueState, bool sendQueued)
         {
-            _sendCommandLogger.LogLine(sendCommand.CommandString());
+            //_sendCommandLogger.LogLine(sendCommand.CommandString());
 
             if (clearQueueState == ClearQueue.ClearReceivedQueue || 
                 clearQueueState == ClearQueue.ClearSendAndReceivedQueue)
@@ -463,7 +480,7 @@ namespace CommandMessenger
             {
                 _controlToInvokeOn = null;
                 _receiveCommandQueue.ThreadRunState = CommandQueue.ThreadRunStates.Stop;
-                _sendCommandLogger.Close();
+               // _sendCommandLogger.Close();
             }
             base.Dispose(disposing);
         }

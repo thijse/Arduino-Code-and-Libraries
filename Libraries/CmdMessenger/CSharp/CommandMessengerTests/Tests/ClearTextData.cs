@@ -30,11 +30,11 @@ namespace CommandMessengerTests
     {        
         private CmdMessenger _cmdMessenger;
         readonly Enumerator _command;
-        private TestPlatform _testPlatform;
+        private systemSettings _systemSettings;
 
-        public ClearTextData(TestPlatform testPlatform, Enumerator command)
+        public ClearTextData(systemSettings systemSettings, Enumerator command)
         {
-            _testPlatform = testPlatform;
+            _systemSettings = systemSettings;
             _command = command;
             DefineCommands();          
         }
@@ -72,7 +72,7 @@ namespace CommandMessengerTests
 
         public void SetUpConnection()
         {
-            _cmdMessenger = Common.Connect(_testPlatform);
+            _cmdMessenger = Common.Connect(_systemSettings);
             AttachCommandCallBacks();
         }
 
@@ -124,14 +124,14 @@ namespace CommandMessengerTests
             for (var i = 0; i < 100; i++)
             {
                 // Bigger values than this go wrong, due to truncation
-                ValuePingPongFloat(i * stepsize, (float)0.05);
+                ValuePingPongFloat(i * stepsize );
             }
             Common.EndTest();
             Common.StartTest("Ping-pong of random float values");
             for (var i = 0; i < 100; i++)
             {
                 // Bigger values than this go wrong, due to truncation
-                ValuePingPongFloat(Random.RandomizeFloat(-UInt32.MaxValue, UInt32.MaxValue), (float)0.05);
+                ValuePingPongFloat(Random.RandomizeFloat(-UInt32.MaxValue, UInt32.MaxValue));
             }
             Common.EndTest();
         }
@@ -157,7 +157,7 @@ namespace CommandMessengerTests
 
         public void TestSendDoubleSciData()
         {
-            var range = (_testPlatform.BoardType==BoardType.Bit32)?double.MaxValue:float.MaxValue;
+            var range = (_systemSettings.BoardType==BoardType.Bit32)?double.MaxValue:float.MaxValue;
             var stepsize = range/100;
             Common.StartTest("Ping-pong of increasing double values, returned in scientific format");
             // Try a lot of random numbers
@@ -175,7 +175,6 @@ namespace CommandMessengerTests
             Common.EndTest();
         }
 
-
         private void ValuePingPongInt16(Int16 value, Int16 accuracy)
         {
             var pingCommand = new SendCommand(_command["ValuePing"], _command["ValuePong"], 1000);
@@ -188,11 +187,11 @@ namespace CommandMessengerTests
             var result = pongCommand.ReadInt16Arg();
 
             var difference = Math.Abs(result - value);
+
             if (difference <= accuracy)
                 Common.TestOk("Value as expected");
             else
                 Common.TestNotOk("unexpected value received: " + result + " instead of " + value);
-
         }
 
         private void ValuePingPongInt32(Int32 value, Int32 accuracy)
@@ -238,7 +237,7 @@ namespace CommandMessengerTests
                 Common.TestNotOk("unexpected value received: " + result + " instead of " + value);
         }
 
-        private void ValuePingPongFloat(float value, float accuracy)
+        private void ValuePingPongFloat(float value)
         {
             var pingCommand = new SendCommand(_command["ValuePing"], _command["ValuePong"], 1000);
             pingCommand.AddArgument((Int16)DataType.Float);
@@ -252,14 +251,15 @@ namespace CommandMessengerTests
             }
 
             var result = pongCommand.ReadFloatArg();
-
             var difference = Math.Abs(result - value);
+            
+            var accuracy = Math.Abs(value * 2e-7);
+
             if (difference <= accuracy)
                 Common.TestOk("Value as expected");
             else
                 Common.TestNotOk("unexpected value received: " + result + " instead of " + value);
         }
-
 
         private void ValuePingPongFloatSci(float value, float accuracy)
         {

@@ -56,9 +56,9 @@ namespace CommandMessengerTests
         private static StreamWriter _streamWriter;
 
 
-        public static CmdMessenger Connect(TestPlatform testPlatform)
+        public static CmdMessenger Connect(systemSettings systemSettings)
         {
-            CmdMessenger = new CmdMessenger(testPlatform.Transport) {BoardType = testPlatform.BoardType};
+            CmdMessenger = new CmdMessenger(systemSettings.Transport, systemSettings.sendBufferMaxLength) {BoardType = systemSettings.BoardType};
             // Attach to NewLineReceived and NewLineSent for logging purposes
             LogCommands(true);
 

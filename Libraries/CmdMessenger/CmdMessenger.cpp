@@ -24,6 +24,9 @@
     CmdMessenger Version 1    - Neil Dudman.
     CmdMessenger Version 2    - Dreamcat4.
 	CmdMessenger Version 3    - Thijs Elenbaas.
+	  3.6  - Fixes
+	       - Better compatibility between platforms
+		   - Unit tests
 	  3.5  - Fixes, speed improvements for Teensy
 	  3.4  - Internal update
 	  3.3  - Fixed warnings
@@ -45,11 +48,9 @@ extern "C" {
 #include <stdio.h>
 #include <CmdMessenger.h>
 
-#define _CMDMESSENGER_VERSION 3_3 // software version of this library
+#define _CMDMESSENGER_VERSION 3_6 // software version of this library
 
 // **** Initialization **** 
-
-
 
 /**
  * CmdMessenger constructor
@@ -154,21 +155,19 @@ uint8_t CmdMessenger::processLine(char serialChar)
     messageState = kProccesingMessage;
     //char serialChar = (char)serialByte;
     bool escaped = isEscaped(&serialChar,escape_character,&CmdlastChar);
-    //if (serialByte > 0 || escaped) {
-        if((serialChar == command_separator) && !escaped) {
-            commandBuffer[bufferIndex]=0;
-            if(bufferIndex > 0) {
-                messageState = kEndOfMessage;
-                current = commandBuffer;
-                CmdlastChar='\0';
-            }
-            reset();
-        } else {
-            commandBuffer[bufferIndex]=serialChar;
-            bufferIndex++;
-            if (bufferIndex >= bufferLastIndex) reset();
-        }
-    //}
+	if((serialChar == command_separator) && !escaped) {
+		commandBuffer[bufferIndex]=0;
+		if(bufferIndex > 0) {
+			messageState = kEndOfMessage;
+			current = commandBuffer;
+			CmdlastChar='\0';
+		}
+		reset();
+	} else {
+		commandBuffer[bufferIndex]=serialChar;
+		bufferIndex++;
+		if (bufferIndex >= bufferLastIndex) reset();
+	}
     return messageState;
 }
 
@@ -184,7 +183,6 @@ void CmdMessenger::handleMessage()
     else // If command not attached, call default callback (if attached)
         if (default_callback!=NULL) (*default_callback)();
 }
-
 
 /**
  * Waits for reply from sender or timeout before continuing
@@ -370,7 +368,6 @@ bool CmdMessenger::sendCmd (int cmdId)
     return false;
 }
 
-
 // **** Command receiving ****
 
 /**
@@ -476,8 +473,6 @@ double CmdMessenger::readDoubleArg()
 	ArgOk  = false;
     return 0;
 }
-
-
 
 /**
  * Read next argument as string.
@@ -671,5 +666,7 @@ void CmdMessenger::printSci(double f, unsigned int digits)
   }
   char format[16];
   sprintf(format, "%%ld.%%0%dldE%%+d", digits);
-  Serial.printf(format, whole, part, exponent);
+  char output[16];
+  sprintf(output,format, whole, part, exponent);
+  comms->print(output);
 }

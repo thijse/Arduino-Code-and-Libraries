@@ -8,11 +8,11 @@ namespace CommandMessengerTests
     {        
         private CmdMessenger _cmdMessenger;
         readonly Enumerator _command;
-        private readonly TestPlatform _testPlatform;
+        private readonly systemSettings _systemSettings;
 
-        public BinaryTextData(TestPlatform testPlatform, Enumerator command)
+        public BinaryTextData(systemSettings systemSettings, Enumerator command)
         {
-            _testPlatform = testPlatform;
+            _systemSettings = systemSettings;
             _command = command;
             DefineCommands();            
         }
@@ -45,7 +45,7 @@ namespace CommandMessengerTests
 
         public void SetUpConnection()
         {
-            _cmdMessenger = Common.Connect(_testPlatform);
+            _cmdMessenger = Common.Connect(_systemSettings);
             AttachCommandCallBacks();
         }
 
@@ -136,7 +136,7 @@ namespace CommandMessengerTests
 
         public void TestSendBinDoubleData()
         {
-            var range = (_testPlatform.BoardType == BoardType.Bit32) ? double.MaxValue : float.MaxValue;
+            var range = (_systemSettings.BoardType == BoardType.Bit32) ? double.MaxValue : float.MaxValue;
             var stepsize = range / 100;
             Common.StartTest("Ping-pong of increasing binary double values");
             // Try a lot of random numbers
@@ -251,7 +251,7 @@ namespace CommandMessengerTests
 
         private void ValuePingPongBinDouble(double value)
         {
-            const double accuracy = double.Epsilon;
+            
             var pingCommand = new SendCommand(_command["ValuePing"], _command["ValuePong"], 1000);
             pingCommand.AddArgument((Int16)DataType.BDouble);
             pingCommand.AddBinArgument(value);
@@ -266,6 +266,11 @@ namespace CommandMessengerTests
             var result = pongCommand.ReadBinDoubleArg();
 
             var difference = Math.Abs(result - value);
+
+            // 
+            // For 16bit, because of double-float-float-double casting a small error is introduced
+            var accuracy = (_systemSettings.BoardType == BoardType.Bit32) ? double.Epsilon : Math.Abs(value * 1e-6);
+
             if (difference <= accuracy)
                 Common.TestOk("Value as expected");
             else
@@ -319,14 +324,6 @@ namespace CommandMessengerTests
         {
             var bytes = BinaryConverter.CharsToBytes(chars); 
             return BitConverter.ToSingle(bytes, 0);
-        }
-
-        public static bool CompareFloats(float input, float output)
-        {
-
-            var error = Math.Abs((input - output) / input);
-            return !(error > 1e-3);
-        }
- 
+        } 
     }
 }

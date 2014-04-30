@@ -43,7 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="TestPlatform.cs" />
+    <Compile Include="systemSettings.cs" />
     <Compile Include="Tests\ClearTextData.cs" />
     <Compile Include="Enumerator.cs" />
     <Compile Include="CommandMessengerTest.cs" />

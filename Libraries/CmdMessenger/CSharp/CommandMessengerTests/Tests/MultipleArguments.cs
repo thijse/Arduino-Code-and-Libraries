@@ -8,17 +8,16 @@ namespace CommandMessengerTests
     {        
         private CmdMessenger _cmdMessenger;
         readonly Enumerator _command;
-        private readonly TestPlatform _testPlatform;
+        private readonly systemSettings _systemSettings;
         private readonly System.Random _randomNumber;
 
-        public MultipleArguments(TestPlatform testPlatform, Enumerator command)
+        public MultipleArguments(systemSettings systemSettings, Enumerator command)
         {
-            _testPlatform = testPlatform;
+            _systemSettings = systemSettings;
             _command = command;
             DefineCommands();
             _randomNumber = new System.Random(DateTime.Now.Millisecond);               
         }
-
 
         // ------------------ Command Callbacks -------------------------
         private void DefineCommands()
@@ -48,7 +47,7 @@ namespace CommandMessengerTests
 
         public void SetUpConnection()
         {
-            _cmdMessenger = Common.Connect(_testPlatform);
+            _cmdMessenger = Common.Connect(_systemSettings);
             AttachCommandCallBacks();
         }
 
@@ -60,13 +59,13 @@ namespace CommandMessengerTests
         public void TestSendMultipleValues()
         {
             Common.StartTest("Ping-pong of a command with handpicked binary int16, int32, and double parameters");
-            _cmdMessenger.LogSendCommandsEnabled = true;
+            //_cmdMessenger.LogSendCommandsEnabled = true;
             ValuePingPongBinInt16Int32Double(
                 -11776,
                 -1279916419,
-                2.33846546670697E+307
+                -2.7844819605867E+38
                 );
-            _cmdMessenger.LogSendCommandsEnabled = false;
+            //_cmdMessenger.LogSendCommandsEnabled = false;
             Common.EndTest();
 
             Common.StartTest("Ping-pong of a command with random binary int16, int32, and double parameters");
@@ -77,8 +76,8 @@ namespace CommandMessengerTests
                     Random.RandomizeInt16(Int16.MinValue, Int16.MaxValue),
                     Random.RandomizeInt32(Int32.MinValue, Int32.MaxValue),
                     Random.RandomizeDouble(
-                        (_testPlatform.BoardType == BoardType.Bit32 ? double.MinValue : float.MinValue), 
-                        (_testPlatform.BoardType == BoardType.Bit32 ? double.MaxValue : float.MaxValue)
+                        (_systemSettings.BoardType == BoardType.Bit32 ? double.MinValue : float.MinValue), 
+                        (_systemSettings.BoardType == BoardType.Bit32 ? double.MaxValue : float.MaxValue)
                         ));
             }
             Common.EndTest();
@@ -111,9 +110,10 @@ namespace CommandMessengerTests
             else
                 Common.TestNotOk("unexpected 2nd parameter value, Int32, received: " + int32Result + " instead of " + int32Value);
 
-
+            // For 16bit, because of double-float-float-double casting a small error is introduced
+            var accuracy = (_systemSettings.BoardType == BoardType.Bit32) ? double.Epsilon : Math.Abs(doubleValue * 1e-6);
             var difference = Math.Abs(doubleResult - doubleValue);
-            if (difference <=  (_testPlatform.BoardType == BoardType.Bit32 ? double.Epsilon : float.Epsilon))
+            if (difference <= accuracy)
                 Common.TestOk("3rd parameter value, Double, as expected: " + doubleResult);
             else
                 Common.TestNotOk("unexpected 3rd parameter value, Double, received: " + doubleResult + " instead of " + doubleValue);

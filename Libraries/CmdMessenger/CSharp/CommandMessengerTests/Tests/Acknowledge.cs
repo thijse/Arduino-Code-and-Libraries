@@ -1,6 +1,5 @@
 using System;
 using CommandMessenger;
-using CommandMessenger.TransportLayer;
 
 namespace CommandMessengerTests
 {
@@ -9,12 +8,12 @@ namespace CommandMessengerTests
         private CmdMessenger _cmdMessenger;
         readonly Enumerator _command;
         private bool _acknowledgementByEmbeddedFinished;
-        private readonly TestPlatform _testPlatform;
+        private readonly systemSettings _systemSettings;
 
 
-        public Acknowledge(TestPlatform testPlatform, Enumerator command)
+        public Acknowledge(systemSettings systemSettings, Enumerator command)
         {
-            _testPlatform = testPlatform;
+            _systemSettings = systemSettings;
             _command = command;
             DefineCommands();
         }
@@ -70,37 +69,29 @@ namespace CommandMessengerTests
 
         public void SetUpConnection()
         {
-            //Common.StartTest("SetUpConnection");
             try
             {
-                _cmdMessenger = Common.Connect(_testPlatform);
+                _cmdMessenger = Common.Connect(_systemSettings);
                 AttachCommandCallBacks();
             }
             catch (Exception)
             {
-                //Common.TestNotOk("Exception during opening connection");
             }
-            if (!_testPlatform.Transport.IsConnected())
+            if (!_systemSettings.Transport.IsConnected())
             {
-                //Common.TestNotOk("Not open after trying to open connection");
             }
-           // Common.EndTest();
         }
 
         public void CloseConnection()
         {
-           // Common.StartTest("CloseConnection");
             try
             {
                 Common.Disconnect();
             }
             catch (Exception)
             {
-          //      Console.WriteLine("Not OK: Exception during closing Connection");
             }
-           // Common.EndTest();
         }
-
 
         // Test: Send a test command with acknowledgment needed
         public void TestSendCommandWithAcknowledgement()
@@ -140,45 +131,7 @@ namespace CommandMessengerTests
                 Common.TestNotOk("No acknowledgment for command AreYouReady");
             }
             Common.EndTest();
-        }
-
-        
-
-        // Test: Check if Arduino can also receive acknowledgments       
-        // This is is a 4-step test :
-        // PC      : AskUsIfReady --> 
-        // Arduino :                     <-- AreYouReady
-        // PC      : Ack -->  
-        // Arduino :                     <--- YouAreReady    
-
-        /// <summary>   Tests send command with acknowledgement by arduino.* </summary>
-        /*
-        public void TestSendCommandWithAcknowledgementByArduino()
-        {
-            Console.WriteLine("*** Test receiving acknowledgment on embedded side");
-            // The Arduino should respond by calling us with AreYouReady command 
-            // We will wait for the YouAreReady response. If we would not wait, the response would trigger the associated 
-            // TestSendCommandWithAcknowledgementByArduinoFinished function, but if the embedded system would not respond correctly
-            // no code would be called and we would have no way of knowing
-            var youAreReadyCommand = _cmdMessenger.SendCommand((int)Command.AskUsIfReady, "", true, (int)Command.YouAreReady, 1000);
-            if (youAreReadyCommand!=null)
-            {
-                
-                // Because we are waiting for YouAreReady, this (and any other) callbacks have been blocked
-                // We could now trigger a callback function associated with the youAreReadyCommand like:
-                
-                //_cmdMessenger.HandleMessage(youAreReadyCommand);                             
-                
-                // But in this case it is easier to we can respond directly 
-                var result = int.Parse(youAreReadyCommand[1]);
-                Console.WriteLine(result == 1 ? "OK" : "Not OK: unexpected response");
-            }
-            else
-            {
-                Console.WriteLine("Not OK: No acknowledgment for command AskUsIfReady");
-            }
-        }
-        */
+        }        
 
         public void TestSendCommandWithAcknowledgementByArduino()
         {
@@ -190,20 +143,15 @@ namespace CommandMessengerTests
             // We will exit here, but the test has just begun:
             // - Next the arduino will call us with AreYouReady command which will trigger OnAreYouReadyCommand() 
             // - After this the Command TestAckSendCommandArduinoFinish will be called by Arduino with results
-            // - 
         }
-
 
         public void TestSendCommandWithAcknowledgementByArduinoFinished(ReceivedCommand command)
         {
-            //Console.WriteLine("*** TestSendCommandWithAcknowledgementByArduinoFinished");
-
             var result = command.ReadBoolArg();
             if (!result)
             {
                 Common.TestNotOk("Incorrect response");
             }
-            //Console.WriteLine(result ? "OK" : "Not OK: unexpected response");
             _acknowledgementByEmbeddedFinished = true;
         }
 
@@ -219,7 +167,6 @@ namespace CommandMessengerTests
                 System.Threading.Thread.Sleep(1000);
             }
             Common.TestNotOk("Received no acknowledge from  processor");
-
         }
 
     }

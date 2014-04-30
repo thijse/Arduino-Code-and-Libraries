@@ -26,32 +26,54 @@ namespace CommandMessengerTests
         public CommandMessengerTest()
         {
             // Set up board & transport mode
-            var testPlatform = new TestPlatform()
-                {
-                    Description = @"Teensy 3.1",
-                    MinDirectSendSpeed =   3500, // Bytes per second
-                    MinSendSpeed       =  90000, // Bytes per second
-                    MinReceiveSpeed    = 140000, // Bytes per second       
-                    BoardType = BoardType.Bit32, // 32 architecture, needed from binary value conversion
-                    Transport = new SerialTransport
-                        {
-                            CurrentSerialSettings = new SerialSettings()
-                                {
-                                    PortName = "COM15",     // Can be different!
-                                    BaudRate = 115200,      // Bits per second
-                                    DataBits = 8,
-                                    Parity = Parity.None,
-                                    DtrEnable = false,          // Some boards need to send this to enabled                                    
-                                },
+            var teensy31 = new systemSettings()
+            {
+                Description = @"Teensy 3.1",
+                MinReceiveSpeed     = 2000000,         // Bits per second    
+                MinSendSpeed        = 1300000,         // Bits per second                                       
+                MinDirectSendSpeed  = 52000,           // Bits per second                     
+                BoardType           = BoardType.Bit32, // 32 architecture, needed from binary value conversion
+                sendBufferMaxLength = 512,             // Maximum send buffer size
+                Transport = new SerialTransport
+                    {
+                        CurrentSerialSettings = new SerialSettings()
+                            {
+                                PortName = "COM15",    // Can be different!
+                                BaudRate = 115200,     // Bits per second
+                                DataBits = 8,          // Data bits
+                                Parity = Parity.None,  // Bit parity
+                                DtrEnable = false,     // Some boards need to send this to enabled                                    
+                            },
                             
-                        }
-                };
+                    }
+            };
+            var arduinoNano = new systemSettings()
+            {
+                Description = @"Arduino Nano /w AT mega328",
+                MinReceiveSpeed     = 84000,              // Bits per second 
+                MinSendSpeed        = 90000,              // Bits per second                                      
+                MinDirectSendSpeed  = 52000,              // Bits per second                
+                BoardType           = BoardType.Bit16,    // 32 architecture, needed from binary value conversion
+                sendBufferMaxLength = 60,                 // Maximum send buffer size
+                Transport = new SerialTransport
+                {
+                    CurrentSerialSettings = new SerialSettings()
+                    {
+                        PortName = "COM6",                // Can be different!
+                        BaudRate = 115200,                // Bits per second
+                        DataBits = 8,                     // Data bits
+                        Parity = Parity.None,             // Bit parity
+                        DtrEnable = false,                // Some boards need to send this to enabled                                    
+                    },
+
+                }
+            };
 
             // Set up Command enumerators
             var command = DefineCommands();
 
             // Initialize tests
-            InitializeTests(testPlatform, command);
+            InitializeTests(teensy31, command);
 
             // Open log file for testing 
             Common.OpenTestLogFile(@"TestLogFile.txt");
@@ -75,14 +97,14 @@ namespace CommandMessengerTests
             return command;
         }
 
-        private void InitializeTests(TestPlatform testPlatform, Enumerator command)
+        private void InitializeTests(systemSettings systemSettings, Enumerator command)
         {
-            _setupConnection   = new SetupConnection(testPlatform, command);
-            _acknowledge       = new Acknowledge(testPlatform, command);
-            _clearTextData     = new ClearTextData(testPlatform, command);
-            _binaryTextData    = new BinaryTextData(testPlatform, command);
-            _multipleArguments = new MultipleArguments(testPlatform, command);
-            _transferSpeed     = new TransferSpeed(testPlatform, command);
+            _setupConnection   = new SetupConnection(systemSettings, command);
+            _acknowledge       = new Acknowledge(systemSettings, command);
+            _clearTextData     = new ClearTextData(systemSettings, command);
+            _binaryTextData    = new BinaryTextData(systemSettings, command);
+            _multipleArguments = new MultipleArguments(systemSettings, command);
+            _transferSpeed     = new TransferSpeed(systemSettings, command);
 
         }
 
