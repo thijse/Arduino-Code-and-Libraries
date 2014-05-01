@@ -113,7 +113,6 @@ private:
     for (unsigned int i = 0; i < sizeof (value); i++)
       {
         printEsc (*bytePointer); 
-        //*bytePointer++;
 		bytePointer++;
       }
   }
@@ -134,6 +133,19 @@ private:
     for (unsigned int i = 0; i < sizeof (value); i++)
       {
         *bytePointer = str[i];
+		bytePointer++;
+      }
+    return value;
+  }
+  
+  template < class T > 
+    T empty ()
+  {
+    T value;
+    byte *bytePointer = (byte *) (const void *) &value;
+    for (unsigned int i = 0; i < sizeof (value); i++)
+      {
+        *bytePointer = '\0';
 		bytePointer++;
       }
     return value;
@@ -187,7 +199,6 @@ public:
 	return false;
   }
 
-
   /**
    * Send a command with a single argument of any type 
    * Note that the argument is sent in binary format
@@ -239,9 +250,10 @@ public:
   
   /**
    * Send double argument in scientific format.
-   *  This will overcome the boundary of normal float sending which is limited to abs(f) <= MAXLONG
+   *  This will overcome the boundary of normal d sending which is limited to abs(f) <= MAXLONG
   */
-  void sendCmdSciArg(double arg, int n);
+  void sendCmdSciArg(double arg, int n=6);
+
   
   /**
    * Send a single argument in binary format
@@ -273,14 +285,17 @@ public:
   {
     if (next ()) {
         dumped = true;      
-    }
-	return readBin < T > (current);
+		return readBin < T > (current);
+    } else {
+		return empty < T > ();
+	}
   }
 
   // **** Escaping tools ****
   
   void unescape (char *fromChar);	
   void printSci(double f, unsigned int digits);  
+  
   
 };
 #endif

@@ -44,7 +44,7 @@ namespace Receive
 
             // Create Serial Port object
             _serialTransport = new SerialTransport();
-            _serialTransport.CurrentSerialSettings.PortName = "COM15";    // Set com port
+            _serialTransport.CurrentSerialSettings.PortName = "COM6";    // Set com port
             _serialTransport.CurrentSerialSettings.BaudRate = 115200;     // Set baud rate
             _serialTransport.CurrentSerialSettings.DtrEnable = false;     // For some boards (e.g. Sparkfun Pro Micro) DtrEnable may need to be true.
             

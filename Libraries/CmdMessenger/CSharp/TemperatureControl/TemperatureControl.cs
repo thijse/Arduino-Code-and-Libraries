@@ -76,7 +76,8 @@ namespace DataLogging
             // Initialize the command messenger with the Serial Port transport layer
             _cmdMessenger = new CmdMessenger(_serialTransport)
             {
-                BoardType = BoardType.Bit16 // Set if it is communicating with a 16- or 32-bit Arduino board
+                BoardType = BoardType.Bit16, // Set if it is communicating with a 16- or 32-bit Arduino board
+                PrintLfCr = false            // Do not print newLine at end of command, to reduce data being sent
             };
 
             // Tell CmdMessenger to "Invoke" commands on the thread running the WinForms UI
@@ -160,11 +161,18 @@ namespace DataLogging
         // the heater steer value and the Pulse Width Modulated (PWM) value.
         private void OnPlotDataPoint(ReceivedCommand arguments)
         {             
-            var time        = arguments.ReadFloatArg();
-            var currTemp    = arguments.ReadFloatArg();
-            var goalTemp    = arguments.ReadFloatArg();
-            var heaterValue = arguments.ReadFloatArg();
-            var heaterPwm   = arguments.ReadBoolArg();
+            //var time        = arguments.ReadFloatArg();
+            //var currTemp    = arguments.ReadFloatArg();
+            //var goalTemp    = arguments.ReadFloatArg();
+            //var heaterValue = arguments.ReadFloatArg();
+            //var heaterPwm   = arguments.ReadBoolArg();
+
+            var time = arguments.ReadBinFloatArg();
+            var currTemp = arguments.ReadBinFloatArg();
+            var goalTemp = arguments.ReadBinFloatArg();
+            var heaterValue = arguments.ReadBinFloatArg();
+            var heaterPwm = arguments.ReadBinBoolArg();
+
 
             _chartForm.UpdateGraph(time, currTemp, goalTemp, heaterValue, heaterPwm);
         }
@@ -188,7 +196,9 @@ namespace DataLogging
             _goalTemperature = goalTemperature;
 
             // Create command to start sending data
-            var command = new SendCommand((int)Command.SetGoalTemperature, _goalTemperature);
+            //var command = new SendCommand((int)Command.SetGoalTemperature, _goalTemperature);
+             var command = new SendCommand((int)Command.SetGoalTemperature);
+             command.AddBinArgument(_goalTemperature);
 
             // Collapse this command if needed using CollapseCommandStrategy
             // This strategy will avoid duplicates of this command on the queue: if a SetGoalTemperature command is

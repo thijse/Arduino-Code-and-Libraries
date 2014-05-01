@@ -73,7 +73,7 @@ namespace CommandMessengerTests
             var command = DefineCommands();
 
             // Initialize tests
-            InitializeTests(teensy31, command);
+            InitializeTests(arduinoNano, command);
 
             // Open log file for testing 
             Common.OpenTestLogFile(@"TestLogFile.txt");
