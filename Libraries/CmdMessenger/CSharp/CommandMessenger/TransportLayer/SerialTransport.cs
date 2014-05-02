@@ -166,8 +166,15 @@ namespace CommandMessenger.TransportLayer
         {
             if (!IsOpen())
             {
-                _serialPort.Open();
-                return IsOpen();
+                try
+                {
+                    _serialPort.Open();
+                    return IsOpen();
+                }
+                catch
+                {
+                    return false;
+                }
             }
 
             return true;
