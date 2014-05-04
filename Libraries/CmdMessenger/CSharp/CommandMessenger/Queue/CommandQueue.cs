@@ -43,7 +43,6 @@ namespace CommandMessenger
         /// <summary> Gets or sets the run state of the thread . </summary>
         /// <value> The thread run state. </value>
         public ThreadRunStates ThreadRunState  
-
         {
             set
             {

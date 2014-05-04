@@ -42,6 +42,7 @@ namespace CommandMessenger.TransportLayer
         private Thread _queueThread;
         protected ThreadRunStates _threadRunState;
         private object _threadRunStateLock = new object();
+        private object serialReadWriteLock = new object();
 
         /// <summary> Gets or sets the run state of the thread . </summary>
         /// <value> The thread run state. </value>
@@ -64,7 +65,6 @@ namespace CommandMessenger.TransportLayer
                 return result;
             }
         }
-
 
         /// <summary> Default constructor. </summary>
         public SerialTransport()
@@ -266,7 +266,10 @@ namespace CommandMessenger.TransportLayer
             {
                 if (IsOpen())
                 {
-                    _serialPort.Write(buffer, 0, buffer.Length);
+                    lock (serialReadWriteLock)
+                    {
+                        _serialPort.Write(buffer, 0, buffer.Length);
+                    }
                 }
             }
             catch
@@ -317,10 +320,13 @@ namespace CommandMessenger.TransportLayer
             {
                 try
                 {
-                    var dataLength = _serialPort.BytesToRead;
-                    buffer = new byte[dataLength];
-                    int nbrDataRead = _serialPort.Read(buffer, 0, dataLength);
-                    if (nbrDataRead == 0) return new byte[0];
+                    lock (serialReadWriteLock)
+                    {
+                        var dataLength = _serialPort.BytesToRead;
+                        buffer = new byte[dataLength];
+                        int nbrDataRead = _serialPort.Read(buffer, 0, dataLength);
+                        if (nbrDataRead == 0) return new byte[0];
+                    }
                 }
                 catch
                 { }
@@ -332,14 +338,6 @@ namespace CommandMessenger.TransportLayer
         /// <returns> Bytes in buffer </returns>
         public int BytesInBuffer()
         {
-            //try
-            //{                
-            //    return _serialPort.BytesToRead;
-            //}
-            //catch (Exception)
-            //{
-            //    return 0;
-            //}
             return IsOpen()? _serialPort.BytesToRead:0;
         }
 
