@@ -79,7 +79,7 @@ namespace CommandMessengerTests
             DirectSendSeries();
 
             // Start logging commands again
-            Common.LogCommands(false);
+            Common.LogCommands(true);
 
             // Close connection
             CloseConnection();
@@ -316,7 +316,7 @@ namespace CommandMessengerTests
                 var commandStrategy = new CommandStrategy(sendSeries);
                 var wrappedCommand = commandStrategy.Command;
 
-                _cmdMessenger.SendCommand((SendCommand)wrappedCommand, ClearQueue.KeepQueue, false);
+                _cmdMessenger.SendCommand((SendCommand)wrappedCommand, ClearQueue.ClearSendQueue, false);
                 if (sendItemsCount % (SeriesLength / 10) == 0)
                     Common.WriteLine("Send value: " + sendItemsCount * SeriesBase);
             }

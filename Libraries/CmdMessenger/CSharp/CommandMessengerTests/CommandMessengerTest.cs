@@ -30,8 +30,8 @@ namespace CommandMessengerTests
             {
                 Description = @"Teensy 3.1",
                 MinReceiveSpeed     = 2000000,         // Bits per second    
-                MinSendSpeed        = 1300000,         // Bits per second                                       
-                MinDirectSendSpeed  = 52000,           // Bits per second                     
+                MinSendSpeed        = 1270000,         // Bits per second                                       
+                MinDirectSendSpeed  = 49000,           // Bits per second                     
                 BoardType           = BoardType.Bit32, // 32 architecture, needed from binary value conversion
                 sendBufferMaxLength = 512,             // Maximum send buffer size
                 Transport = new SerialTransport
@@ -73,7 +73,7 @@ namespace CommandMessengerTests
             var command = DefineCommands();
 
             // Initialize tests
-            InitializeTests(arduinoNano, command);
+            InitializeTests(teensy31, command);
 
             // Open log file for testing 
             Common.OpenTestLogFile(@"TestLogFile.txt");
@@ -111,19 +111,19 @@ namespace CommandMessengerTests
         private void RunTests()
         {
             // Test opening and closing connection
-            _setupConnection.RunTests();
+            //_setupConnection.RunTests();
             
             // Test acknowledgment both on PC side and embedded side
-            _acknowledge.RunTests();
+            //_acknowledge.RunTests();
 
             // Test all plain text formats
-            _clearTextData.RunTests();
+            //_clearTextData.RunTests();
 
             // Test all binary formats
-            _binaryTextData.RunTests();            
+            //_binaryTextData.RunTests();            
             
             // Test sending multiple arguments
-            _multipleArguments.RunTests();
+            //_multipleArguments.RunTests();
 
             // Test large series for completeness (2-way)
             // todo
