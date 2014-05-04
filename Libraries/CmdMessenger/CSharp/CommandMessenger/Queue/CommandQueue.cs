@@ -40,7 +40,9 @@ namespace CommandMessenger
             Abort,
         }
 
-        public ThreadRunStates ThreadRunState  // Run state of the thread 
+        /// <summary> Gets or sets the run state of the thread . </summary>
+        /// <value> The thread run state. </value>
+        public ThreadRunStates ThreadRunState  
 
         {
             set
@@ -105,6 +107,7 @@ namespace CommandMessenger
             GeneralStrategies.Add(generalStrategy);
         }
 
+        /// <summary> Kills this object. </summary>
         public void Kill()
         {
             ThreadRunState = ThreadRunStates.Stop;
@@ -113,6 +116,9 @@ namespace CommandMessenger
             if (QueueThread.IsAlive) QueueThread.Abort();
         }
 
+        /// <summary> Joins the thread. </summary>
+        /// <param name="millisecondsTimeout"> The milliseconds timeout. </param>
+        /// <returns> true if it succeeds, false if it fails. </returns>
         public bool Join(int millisecondsTimeout)
         {
             if (QueueThread.IsAlive == false) return true;

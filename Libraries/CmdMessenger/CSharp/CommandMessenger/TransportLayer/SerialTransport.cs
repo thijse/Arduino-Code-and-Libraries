@@ -43,7 +43,9 @@ namespace CommandMessenger.TransportLayer
         protected ThreadRunStates _threadRunState;
         private object _threadRunStateLock = new object();
 
-        public ThreadRunStates ThreadRunState  // Run state of the thread 
+        /// <summary> Gets or sets the run state of the thread . </summary>
+        /// <value> The thread run state. </value>
+        public ThreadRunStates ThreadRunState  
         {
             set
             {
@@ -62,7 +64,6 @@ namespace CommandMessenger.TransportLayer
                 return result;
             }
         }
-
 
 
         /// <summary> Default constructor. </summary>
@@ -342,6 +343,7 @@ namespace CommandMessenger.TransportLayer
             return IsOpen()? _serialPort.BytesToRead:0;
         }
 
+        /// <summary> Kills this object. </summary>
         public void Kill()
         {
             // Signal thread to stop
@@ -363,6 +365,9 @@ namespace CommandMessenger.TransportLayer
 
         }
 
+        /// <summary> Joins the thread. </summary>
+        /// <param name="millisecondsTimeout"> The milliseconds timeout. </param>
+        /// <returns> true if it succeeds, false if it fails. </returns>
         public bool Join(int millisecondsTimeout)
         {
             if (_queueThread.IsAlive == false) return true;
