@@ -111,19 +111,19 @@ namespace CommandMessengerTests
         private void RunTests()
         {
             // Test opening and closing connection
-            //_setupConnection.RunTests();
+            _setupConnection.RunTests();
             
             // Test acknowledgment both on PC side and embedded side
-            //_acknowledge.RunTests();
+            _acknowledge.RunTests();
 
             // Test all plain text formats
-            //_clearTextData.RunTests();
+            _clearTextData.RunTests();
 
             // Test all binary formats
-            //_binaryTextData.RunTests();            
+            _binaryTextData.RunTests();            
             
             // Test sending multiple arguments
-            //_multipleArguments.RunTests();
+            _multipleArguments.RunTests();
 
             // Test large series for completeness (2-way)
             // todo

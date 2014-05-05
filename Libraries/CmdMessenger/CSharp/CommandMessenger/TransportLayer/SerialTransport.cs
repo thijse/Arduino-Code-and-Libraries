@@ -40,9 +40,9 @@ namespace CommandMessenger.TransportLayer
     {
         private readonly QueueSpeed _queueSpeed = new QueueSpeed(4,10);
         private Thread _queueThread;
-        protected ThreadRunStates _threadRunState;
-        private object _threadRunStateLock = new object();
-        private object serialReadWriteLock = new object();
+        private ThreadRunStates _threadRunState;
+        private readonly object _threadRunStateLock = new object();
+        private readonly object _serialReadWriteLock = new object();
 
         /// <summary> Gets or sets the run state of the thread . </summary>
         /// <value> The thread run state. </value>
@@ -57,7 +57,7 @@ namespace CommandMessenger.TransportLayer
             }
             get
             {
-                ThreadRunStates result = ThreadRunStates.Start;
+                ThreadRunStates result;
                 lock (_threadRunStateLock)
                 {
                     result = _threadRunState;
@@ -266,7 +266,7 @@ namespace CommandMessenger.TransportLayer
             {
                 if (IsOpen())
                 {
-                    lock (serialReadWriteLock)
+                    lock (_serialReadWriteLock)
                     {
                         _serialPort.Write(buffer, 0, buffer.Length);
                     }
@@ -320,7 +320,7 @@ namespace CommandMessenger.TransportLayer
             {
                 try
                 {
-                    lock (serialReadWriteLock)
+                    //lock (serialReadWriteLock)
                     {
                         var dataLength = _serialPort.BytesToRead;
                         buffer = new byte[dataLength];

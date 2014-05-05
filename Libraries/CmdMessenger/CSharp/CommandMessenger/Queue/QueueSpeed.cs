@@ -31,7 +31,7 @@ namespace CommandMessenger
         private double _sleepTime;
         private const double Alpha = 0.8;
         private readonly double _targetQueue = 0.5;
-        private readonly long MaxSleep = 50;
+        private readonly long _maxSleep = 50;
         private const long MinSleep = 0;
 
         /// <summary> Gets or sets the QueueSpeed name. Used for debugging </summary>
@@ -55,7 +55,7 @@ namespace CommandMessenger
             _targetQueue = targetQueue;
             _prevTime = TimeUtils.Millis;
             _sleepTime = 0;
-            MaxSleep = maxSleep;
+            _maxSleep = maxSleep;
         }
 
         /// <summary> Calculates the sleep time taking into account work being done in queue. </summary>
@@ -64,9 +64,9 @@ namespace CommandMessenger
             var deltaT = Math.Max((currentTime-_prevTime),1);
             var processT = deltaT- _sleepTime;
             double rate = (double)_queueCount / (double)deltaT;
-            double targetT = Math.Min(_targetQueue / rate, MaxSleep); 
+            double targetT = Math.Min(_targetQueue / rate, _maxSleep); 
             double compensatedT = Math.Min(Math.Max(targetT - processT, 0), 1e6);
-            _sleepTime = Math.Max((double)Math.Min((Alpha * _sleepTime + (1 - Alpha) * compensatedT), (double)MaxSleep), MinSleep);
+            _sleepTime = Math.Max((double)Math.Min((Alpha * _sleepTime + (1 - Alpha) * compensatedT), (double)_maxSleep), MinSleep);
 
             //if (Name != "" && Name != null)
             //{
@@ -85,7 +85,7 @@ namespace CommandMessenger
             var currentTime = TimeUtils.Millis;
             var deltaT = Math.Max((currentTime - _prevTime), 1);
             double rate = _queueCount / (double)deltaT;
-            double targetT = Math.Min(_targetQueue / rate,MaxSleep);
+            double targetT = Math.Min(_targetQueue / rate,_maxSleep);
             _sleepTime = Math.Max((Alpha * _sleepTime + (1 - Alpha) * targetT), MinSleep);
             //if (Name != "" && Name != null)
             //{
