@@ -217,7 +217,7 @@ namespace DataLogging
             var command = new SendCommand((int)Command.StartLogging,(int)Command.Acknowledge,5);
 
             // Wait for an acknowledgment that data is being sent. Clear both the receive queue until the acknowledgment is received
-            var receivedCommand = _cmdMessenger.SendCommand(command, SendQueue.WaitForEmptyQueue,ReceiveQueue.ClearQueue);            =
+            var receivedCommand = _cmdMessenger.SendCommand(command, SendQueue.WaitForEmptyQueue,ReceiveQueue.ClearQueue);            
             if (!receivedCommand.Ok)
             {
                 Console.WriteLine(@" Failure > no OK received from controller");
