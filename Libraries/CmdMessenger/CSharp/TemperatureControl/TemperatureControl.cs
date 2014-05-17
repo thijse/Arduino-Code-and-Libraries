@@ -161,18 +161,12 @@ namespace DataLogging
         // the heater steer value and the Pulse Width Modulated (PWM) value.
         private void OnPlotDataPoint(ReceivedCommand arguments)
         {             
-            //var time        = arguments.ReadFloatArg();
-            //var currTemp    = arguments.ReadFloatArg();
-            //var goalTemp    = arguments.ReadFloatArg();
-            //var heaterValue = arguments.ReadFloatArg();
-            //var heaterPwm   = arguments.ReadBoolArg();
 
             var time = arguments.ReadBinFloatArg();
             var currTemp = arguments.ReadBinFloatArg();
             var goalTemp = arguments.ReadBinFloatArg();
             var heaterValue = arguments.ReadBinFloatArg();
             var heaterPwm = arguments.ReadBinBoolArg();
-
 
             _chartForm.UpdateGraph(time, currTemp, goalTemp, heaterValue, heaterPwm);
         }

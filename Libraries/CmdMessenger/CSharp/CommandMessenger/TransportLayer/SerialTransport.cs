@@ -77,8 +77,7 @@ namespace CommandMessenger.TransportLayer
         {            
            // _queueSpeed.Name = "Serial";
             // Find installed serial ports on hardware
-            _currentSerialSettings.PortNameCollection = SerialPort.GetPortNames();
-            _currentSerialSettings.PropertyChanged += CurrentSerialSettingsPropertyChanged;
+            _currentSerialSettings.PortNameCollection = SerialPort.GetPortNames();         
 
             // If serial ports are found, we select the first one
             if (_currentSerialSettings.PortNameCollection.Length > 0)
@@ -121,20 +120,9 @@ namespace CommandMessenger.TransportLayer
             get { return _serialPort; }
         }
 
-
         #endregion
 
-        #region Event handlers
-
-        /// <summary> Current serial settings property changed. </summary>
-        /// <param name="sender"> Source of the event. </param>
-        /// <param name="e">      Property changed event information. </param>
-        private void CurrentSerialSettingsPropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            // if serial port is changed, a new baud query is issued
-            if (e.PropertyName.Equals("PortName"))
-                UpdateBaudRateCollection();
-        }
+        #region Methods
 
         protected  void ProcessQueue()
         {
@@ -154,11 +142,7 @@ namespace CommandMessenger.TransportLayer
                 }
             }
             _queueSpeed.Sleep(50);
-        }
-
-        #endregion
-
-        #region Methods
+        }        
 
         /// <summary> Connects to a serial port defined through the current settings. </summary>
         /// <returns> true if it succeeds, false if it fails. </returns>
@@ -189,12 +173,13 @@ namespace CommandMessenger.TransportLayer
         /// <returns> true if it succeeds, false if it fails. </returns>
         public bool Open()
         {
-            if (!IsOpen())
+                       
+            if(_serialPort != null && PortExists() && !_serialPort.IsOpen)
             {
                 try
                 {
                     _serialPort.Open();
-                    return IsOpen();
+                    return _serialPort.IsOpen;
                 }
                 catch
                 {
@@ -223,17 +208,15 @@ namespace CommandMessenger.TransportLayer
         {
             try
             {
-                if (SerialPort != null && PortExists())
-                {
-                    _serialPort.Close();
-                    return true;
-                }
+                if (SerialPort == null || !PortExists()) return false;
+                if (!_serialPort.IsOpen) return true;
+                _serialPort.Close();
+                return true;
             }
             catch
             {
                 return false;
-            }
-            return true;
+            }            
         }
 
         /// <summary> Query ifthe serial port is open. </summary>
@@ -254,8 +237,9 @@ namespace CommandMessenger.TransportLayer
         /// <returns> true if it succeeds, false if it fails. </returns>
         public bool StopListening()
         {
-            ThreadRunState = ThreadRunStates.Start;
-            return Close();
+            ThreadRunState = ThreadRunStates.Stop;
+            var state = Close();
+            return state;
         }
 
         /// <summary> Writes a parameter to the serial port. </summary>
@@ -283,9 +267,7 @@ namespace CommandMessenger.TransportLayer
         {
             try
             {
-                Close();
-                _serialPort = new SerialPort(_currentSerialSettings.PortName);
-                if (Open())
+                if (_serialPort!=null)
                 {
                     var fieldInfo = _serialPort.BaseStream.GetType()
                                                .GetField("commProp", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -320,7 +302,7 @@ namespace CommandMessenger.TransportLayer
             {
                 try
                 {
-                    //lock (serialReadWriteLock)
+                    lock (_serialReadWriteLock)
                     {
                         var dataLength = _serialPort.BytesToRead;
                         buffer = new byte[dataLength];
@@ -346,8 +328,6 @@ namespace CommandMessenger.TransportLayer
         {
             // Signal thread to stop
             ThreadRunState = ThreadRunStates.Stop;
-            // Release events
-            _currentSerialSettings.PropertyChanged -= CurrentSerialSettingsPropertyChanged;
 
             //Wait for thread to die
             Join(500);
