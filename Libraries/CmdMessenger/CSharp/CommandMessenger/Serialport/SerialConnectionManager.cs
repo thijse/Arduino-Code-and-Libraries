@@ -1,4 +1,23 @@
-﻿using System;
+﻿#region CmdMessenger - MIT - (c) 2014 Thijs Elenbaas.
+/*
+  CmdMessenger - library that provides command based messaging
+
+  Permission is hereby granted, free of charge, to any person obtaining
+  a copy of this software and associated documentation files (the
+  "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to
+  the following conditions:
+
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+  Copyright 2014 - Thijs Elenbaas
+*/
+#endregion
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -6,14 +25,13 @@ using System.IO.Ports;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
-using System.Timers;
-using System.Windows.Forms;
-using CommandMessenger.ConnectionManager;
-using CommandMessenger.TransportLayer;
-using Timer = System.Timers.Timer;
 
 namespace CommandMessenger.Serialport
 {
+
+    /// <summary>
+    /// Class for storing last succesfull connection
+    /// </summary>
     [Serializable()]
     public class LastConnectedSetting 
     {
@@ -21,169 +39,48 @@ namespace CommandMessenger.Serialport
         public int BaudRate { get; set; }
     }
 
-    public class SerialConnectionManager :  IConnectionManager , IDisposable 
+    /// <summary>
+    /// Connection manager for serial port connection
+    /// </summary>
+    public class SerialConnectionManager :  ConnectionManager 
     {
         const string SettingsFileName = @"LastConnectedSerialSetting.cfg";
         private LastConnectedSetting _lastConnectedSetting;
-        private readonly CmdMessenger _cmdMessenger;
         private readonly SerialTransport _serialTransport;
-        private long _watchdogTimeOut;
-        private readonly Timer _watchdogTimer;
-        bool watchDogRunning;
         private int _scanType = 0;
 
-        private bool _activeConnection;
-        public event EventHandler ConnectionTimeout;
-        public event EventHandler ConnectionFound;
-        public event EventHandler<ConnectionManagerProgressEventArgs> Progress;
-        private readonly BackgroundWorker _scanThread;
-        private readonly int _challengeCommandId;
-        private readonly int _responseCommandId;
-
-        public bool Connected { get; set; }
-
         // The control to invoke the callback on
-        private Control _controlToInvokeOn;
         private readonly object _tryConnectionLock = new object();
 
-        public SerialConnectionManager(SerialTransport serialTransport, CmdMessenger cmdMessenger, int challengeCommandId, int responseCommandId)
+        /// <summary>
+        /// Connection manager for serial port connection
+        /// </summary
+        public SerialConnectionManager(SerialTransport serialTransport, CmdMessenger cmdMessenger, int challengeCommandId, int responseCommandId) :
+            base(cmdMessenger, challengeCommandId, responseCommandId)
         {
+            WatchdogTimeOut = 2000;
+            WatchdogRetryTimeOut = 1000;
+            MaxWatchdogTries = 3;
+
             if (serialTransport == null) return;
             if (cmdMessenger    == null) return;
 
-            _controlToInvokeOn = null;
             _serialTransport = serialTransport;
-            _cmdMessenger = cmdMessenger;
-            _scanThread = new BackgroundWorker {WorkerSupportsCancellation = true, WorkerReportsProgress = false};
-            _scanThread.DoWork += ScanThreadDoWork;
-            _scanThread.RunWorkerCompleted += ScanThreadRunWorkerCompleted;
-            _challengeCommandId = challengeCommandId;
-            _responseCommandId = responseCommandId;
 
             _lastConnectedSetting = new LastConnectedSetting();
             ReadSettings();
-            _cmdMessenger.Attach((int)responseCommandId, OnResponseCommandId);
             _serialTransport.UpdatePortCollection();
 
-            _watchdogTimer = new Timer(2000); 
-            _watchdogTimer.Elapsed += TimerElapsed;
-
+            StartConnectionManager();
         }
 
-        /// <summary> Sets a control to invoke on. </summary>
-        /// <param name="controlToInvokeOn"> The control to invoke on. </param>
-        public void SetControlToInvokeOn(Control controlToInvokeOn)
-        {
-            _controlToInvokeOn = controlToInvokeOn;
-        }
-
-        private void InvokeEvent(EventHandler eventHandler)
-        {
-            try
-            {
-                if (eventHandler == null) return;
-                if (_controlToInvokeOn != null && _controlToInvokeOn.InvokeRequired)
-                {
-                    //Asynchronously call on UI thread
-                    _controlToInvokeOn.Invoke((MethodInvoker)(() => eventHandler(this, null)));
-                    Thread.Yield();
-                }
-                else
-                {
-                    //Directly call
-                    eventHandler(this, null);
-                }
-            }
-            catch (Exception)
-            {
-            }
-        }
-
-        private void InvokeEvent<TEventHandlerArguments>(EventHandler<TEventHandlerArguments> eventHandler, TEventHandlerArguments eventHandlerArguments) where TEventHandlerArguments : EventArgs 
-        {
-            try
-            {
-                if (eventHandler == null) return;
-                if (_controlToInvokeOn != null && _controlToInvokeOn.InvokeRequired)
-                {
-                    //Asynchronously call on UI thread
-                    _controlToInvokeOn.Invoke((MethodInvoker)(() => eventHandler(this, eventHandlerArguments)));
-                    Thread.Yield();
-                }
-                else
-                {
-                    //Directly call
-                    eventHandler(this, eventHandlerArguments);
-                }
-            }
-            catch (Exception)
-            {
-            }
-        }
-
-        private void Log(int level, string logMessage) 
-        {
-            var args = new ConnectionManagerProgressEventArgs {Level = level, Description = logMessage};
-            InvokeEvent(Progress, args);
-        }
-
-        private void OnResponseCommandId(ReceivedCommand arguments)
-        {            
-            // Do nothing
-        }
-
-        public void StartScan()
-        {
-            if (_scanThread.IsBusy != true)
-            {
-                // Start the asynchronous operation.
-                _scanThread.RunWorkerAsync();
-            }   
-        }
-
-        public void StopScan()
-        {
-            if (_scanThread.WorkerSupportsCancellation)
-            {
-                // Cancel the asynchronous operation.
-                _scanThread.CancelAsync();
-            }
-        }
-
-        private void ScanThreadRunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            //if (ConnectionFound != null) ConnectionFound.Invoke(this, null);
-        }
-
-        private void ScanThreadDoWork(object sender, DoWorkEventArgs e)
-        {
-            if (Thread.CurrentThread.Name == null) Thread.CurrentThread.Name = "BluetoothConnectionManager scan";
-            var worker = sender as BackgroundWorker;
-            _activeConnection = false;
-            
-            while (!_activeConnection)
-            {
-                if (worker != null && worker.CancellationPending)
-                {
-                    e.Cancel = true;
-                    break;
-                }
-                if (_scanType == 0)
-                {
-                    _scanType = 1;
-                    try { _activeConnection = QuickScan(); } catch{}
-                }                
-                else if (_scanType == 1)
-                {
-                    _scanType = 0;
-                    try { _activeConnection = ThoroughScan(); } catch { }                  
-                }
-            }
-
-            // Trigger event when a connection was made
-            if (_activeConnection && ConnectionFound != null) InvokeEvent(ConnectionFound); // ConnectionFound.Invoke(this, null);
-        }
-
+        /// <summary>
+        /// Try connection given specific port name & baud rate
+        /// </summary>
+        /// <param name="portName">Port name</param>
+        /// <param name="baudRate">Baud rate</param>
+        /// <param name="timeOut">Time out for response</param>
+        /// <returns>true if succesfully connected</returns>
         public bool TryConnection(string portName, int baudRate, int timeOut)
         {
             // Try specific port name & baud rate
@@ -193,6 +90,11 @@ namespace CommandMessenger.Serialport
             return TryConnection(timeOut); 
         }
 
+        /// <summary>
+        /// Try connection 
+        /// </summary>
+        /// <param name="timeOut">Time out for response</param>
+        /// <returns>true if succesfully connected</returns>
         public bool TryConnection(int timeOut)
         {
             lock(_tryConnectionLock)
@@ -200,7 +102,7 @@ namespace CommandMessenger.Serialport
             Log(1, @"Trying serial port " + _serialTransport.CurrentSerialSettings.PortName + @" baud rate " + _serialTransport.CurrentSerialSettings.BaudRate);
             if (_serialTransport.Connect())
             {
-                Connected = (ArduinoAvailable(timeOut));
+                Connected = (ArduinoAvailable(timeOut,2));
                 
                 if (Connected)
                 {
@@ -212,19 +114,6 @@ namespace CommandMessenger.Serialport
             return false;
         }
 
-        public bool ArduinoAvailable(int timeOut)
-        {
-            Log(3, "Polling Arduino");
-            var challengeCommand = new SendCommand(_challengeCommandId, _responseCommandId, timeOut);
-            var responseCommand = _cmdMessenger.SendCommand(challengeCommand);
-            return responseCommand.Ok;
-        }
-
-        public bool Disconnect()
-        {            
-            Connected = false;
-            return _cmdMessenger.Disconnect();
-        }
 
         // Single scan on foreground thread
         public bool SingleScan()
@@ -232,13 +121,42 @@ namespace CommandMessenger.Serialport
             if (QuickScan()) return true;
             if (ThoroughScan()) return true;
             return false;
-        }        
+        }
+
+        protected override void DoWorkScan()
+        {
+            if (Thread.CurrentThread.Name == null) Thread.CurrentThread.Name = "BluetoothConnectionManager";
+            var activeConnection = false;
+            
+            {
+                if (_scanType == 0)
+                {
+                    _scanType = 1;
+                    try { activeConnection = QuickScan(); }
+                    catch { }
+                }
+                else if (_scanType == 1)
+                {
+                    _scanType = 0;
+                    try { activeConnection = ThoroughScan(); }
+                    catch { }
+                }
+            }
+
+            // Trigger event when a connection was made
+            if (activeConnection)
+            {
+                ConnectionManagerState = ConnectionManagerStates.Wait;
+                ConnectionFoundEvent();
+
+            } 
+        }
 
         public bool QuickScan()
         {            
             Log(3, "Performing quick scan");
-            const int longTimeOut =  500;
-            const int shortTimeOut = 200;
+            const int longTimeOut =  1000;
+            const int shortTimeOut = 500;
 
             // First try if currentConnection is open or can be opened
             if (TryConnection(longTimeOut)) return true;
@@ -248,7 +166,7 @@ namespace CommandMessenger.Serialport
             if (TryConnection(_lastConnectedSetting.Port, _lastConnectedSetting.BaudRate, longTimeOut)) return true;
 
             // Then see if port list has changed
-            if (NewPortInList().Count > 0) { _scanType = 2; return false; }
+            //if (NewPortInList().Count > 0) { _scanType = 2; return false; }
 
             // Quickly run through most used ports
             int[] commonBaudRates =
@@ -270,18 +188,18 @@ namespace CommandMessenger.Serialport
                 _serialTransport.UpdateBaudRateCollection();
                 var baudRateCollection =_serialTransport.CurrentSerialSettings.BaudRateCollection;
 
-                Log(1, 
-                    "Trying Port" + portName + ", possible speeds " +
-                    baudRateCollection.Count + " " +
-                    (baudRateCollection.Count > commonBaudRates.Length ? ", trying " + commonBaudRates.Length : "")
-                    );
-
                 //  Now loop through baud rate collection
                 foreach (var commonBaudRate in commonBaudRates)
                 {
 
                     if (_serialTransport.CurrentSerialSettings.BaudRateCollection.Contains(commonBaudRate))
-                    {                        
+                    {
+
+                        Log(1,
+                            "Trying Port" + portName + ", possible speeds " +
+                            baudRateCollection.Count + " " +
+                            (baudRateCollection.Count > commonBaudRates.Length ? ", trying " + commonBaudRates.Length : "")
+                            );
                         if (TryConnection(portName,commonBaudRate, shortTimeOut)) return true;
                         Thread.Sleep(25); 
                     }                    
@@ -295,8 +213,8 @@ namespace CommandMessenger.Serialport
             Console.WriteLine("Performing thorough scan");
             Log(1, "Performing thorough scan");
             // First try last used connection
-            const int longTimeOut = 2000;
-            const int shortTimeOut = 100;
+            const int longTimeOut = 1000;
+            const int shortTimeOut = 500;
 
             // First try if currentConnection is open or can be opened
             if (TryConnection(longTimeOut)) return true;
@@ -304,13 +222,14 @@ namespace CommandMessenger.Serialport
             // Then try if last stored connection can be opened
             if (TryConnection(_lastConnectedSetting.Port, _lastConnectedSetting.BaudRate, longTimeOut)) return true;
 
-            // If port list has changed, interrupt scan and test new ports first
-            if (NewPortScan()) return true;
+
 
             // Slowly walk through 
             _serialTransport.UpdatePortCollection();
             foreach (var portName in _serialTransport.CurrentSerialSettings.PortNameCollection)
             {
+
+
                 // First set port name
                 _serialTransport.CurrentSerialSettings.PortName = portName;
                 // update BaudRate Collection
@@ -322,8 +241,8 @@ namespace CommandMessenger.Serialport
 
                 foreach (var baudRate in baudRateCollection)
                 {
-                    // Then see if port list has changed
-                    if (NewPortInList().Count > 0) { _scanType = 2; return false; }
+                    // If port list has changed, interrupt scan and test new ports first
+                    if (NewPortScan()) return true;
                     {
                         if (TryConnection(portName,baudRate, shortTimeOut))
                             return true;
@@ -406,70 +325,6 @@ namespace CommandMessenger.Serialport
                 var deserializer = new BinaryFormatter();
                 _lastConnectedSetting = (LastConnectedSetting)deserializer.Deserialize(fileStream);
                 fileStream.Close();
-            }
-        }
-
-        public void StartWatchDog(long watchdogTimeOut)
-        {
-            watchDogRunning = true;
-            _watchdogTimeOut = watchdogTimeOut;
-            _watchdogTimer.Interval = _watchdogTimeOut;
-            _watchdogTimer.Start();
-            Thread.Yield();    
-        }
-
-        public void StopWatchDog()
-        {
-            watchDogRunning = false;
-            _watchdogTimer.Stop();
-            Thread.Yield();             
-        }
-
-        private void TimerElapsed(object sender, ElapsedEventArgs e)
-        {
-            try { ConnectionWatchDog(); } catch {}
-        }
-
-        private void ConnectionWatchDog()
-        {
-            if (Thread.CurrentThread.Name == null) Thread.CurrentThread.Name = "BluetoothConnectionManager watchdog";
-            // Check how long ago last command was received
-            var lastLineTimeStamp = _cmdMessenger.LastReceivedCommandTimeStamp;
-
-            if ((TimeUtils.Millis - lastLineTimeStamp) >= 2*_watchdogTimeOut)
-            {
-                if (ConnectionTimeout != null && watchDogRunning)
-                {                    
-                    {
-                        StopWatchDog();
-                        InvokeEvent(ConnectionTimeout); 
-                    }
-                }
-            } else if ((TimeUtils.Millis - lastLineTimeStamp) >= _watchdogTimeOut)
-            {
-                // We queue the command in order to not be intrusive
-                _cmdMessenger.QueueCommand(new SendCommand(_challengeCommandId));
-                // We do not need to more, since a response will update LastReceivedCommandTimeStamp
-            }
-        }
-
-        // Dispose 
-        public void Dispose()
-        {
-            Dispose(true);
-        }
-
-        // Dispose
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                StopScan();
-                StopWatchDog();
-                _scanThread.DoWork -= ScanThreadDoWork;
-                _scanThread.RunWorkerCompleted -= ScanThreadRunWorkerCompleted;
-                _watchdogTimer.Elapsed -= TimerElapsed;
-                _watchdogTimer.Close();
             }
         }
 

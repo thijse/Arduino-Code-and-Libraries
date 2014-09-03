@@ -17,8 +17,6 @@
 */
 #endregion
 
-//Once the socket has been disconnected, you can only reconnect again asynchronously, and only to a different EndPoint.  BeginConnect must be called on a thread that won't exit until the operation has been completed.
-
 using System;
 using System.IO;
 using System.Net.Sockets;
@@ -151,10 +149,6 @@ namespace CommandMessenger.Bluetooth
         private void Poll(ThreadRunStates threadRunState)
         {
             var bytes = UpdateBuffer();
-            //var bytes = BytesInBuffer();
-            //_queueSpeed.SetCount(bytes);
-            //_queueSpeed.CalcSleepTimeWithoutLoad();
-            //_queueSpeed.Sleep();
             if (threadRunState == ThreadRunStates.Start)
             {
                 if (bytes > 0)

@@ -17,7 +17,6 @@ using System;
 using CommandMessenger;
 using CommandMessenger.Serialport;
 using CommandMessenger.TransportLayer;
-using CommandMessenger.ConnectionManager;
 using System.Threading;
 using CommandMessenger.Bluetooth;
 namespace DataLogging
@@ -47,7 +46,7 @@ namespace DataLogging
         // ChartForm.cs contains the view components 
         private ITransport            _transport;
         private CmdMessenger          _cmdMessenger;
-        private IConnectionManager    _connectionManager;
+        private ConnectionManager    _connectionManager;
         private ChartForm             _chartForm;
         //private float                 _startTime;
         private double                _goalTemperature;
@@ -85,7 +84,7 @@ namespace DataLogging
             // 1. Serial port. This can be a real serial port but is usually a virtual serial port over USB. 
             //                 It can also be a virtual serial port over Bluetooth, but the direct bluetooth works better
             // 2. Bluetooth    This bypasses the Bluetooth virtual serial port, but communicates over the RFCOMM layer                 
-            var transportMode = TransportMode.Bluetooth;
+            var transportMode = TransportMode.Serial;
             
             // getting the chart control on top of the chart form.
             _chartForm = chartForm;
@@ -293,7 +292,7 @@ namespace DataLogging
             if (AcquisitionStarted) StartAcquisition(); else StopAcquisition();
             AcceptData = true;
             // Start Watchdog
-            _connectionManager.StartWatchDog(2000);
+            _connectionManager.StartWatchDog();
 
             // Yield time slice in order to get UI updated
             Thread.Yield();

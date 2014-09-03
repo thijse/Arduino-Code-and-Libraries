@@ -1,12 +1,28 @@
-﻿using System;
+﻿#region CmdMessenger - MIT - (c) 2014 Thijs Elenbaas.
+/*
+  CmdMessenger - library that provides command based messaging
+
+  Permission is hereby granted, free of charge, to any person obtaining
+  a copy of this software and associated documentation files (the
+  "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to
+  the following conditions:
+
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+  Copyright 2014 - Thijs Elenbaas
+*/
+#endregion
+
+using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
-using System.Windows.Forms;
-using CommandMessenger.ConnectionManager;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
 using InTheHand.Net.Sockets;
@@ -14,14 +30,10 @@ using InTheHand.Net.Sockets;
 namespace CommandMessenger.Bluetooth
 {
 
-    public enum ConnectionManagerStates
-    {
-        Scan,
-        Watchdog,
-        Wait,
-        Stop
-    }
-
+   
+    /// <summary>
+    /// Class for storing last succesfull connection
+    /// </summary>
     [Serializable]
     public class BluetoothConfiguration 
     {
@@ -29,7 +41,10 @@ namespace CommandMessenger.Bluetooth
         public Dictionary<BluetoothAddress, string> StoredDevicePins { get; set; }
     }
 
-    public class BluetoothConnectionManager : IConnectionManager
+    /// <summary>
+    /// Connection manager for Bluetooth devices
+    /// </summary>
+    public class BluetoothConnectionManager : ConnectionManager
     {
         private static readonly List<string> CommonDevicePins = new List<string>
             {
@@ -40,48 +55,33 @@ namespace CommandMessenger.Bluetooth
 
         const string SettingsFileName = @"LastConnectedBluetoothSetting.cfg";
         private BluetoothConfiguration _bluetoothConfiguration;
-        private readonly CmdMessenger _cmdMessenger;
         private readonly BluetoothTransport _bluetoothTransport;
-        private const long WatchdogTimeOut = 2000;
-        private const long WatchdogRetryTimeOut = 1000;
-        private long _lastCheckTime;
-        private const int MaxWatchdogTries = 3;
-        private int _watchdogTries;
         private int _scanType;
-        private ConnectionManagerStates _connectionManagerState;
-        private bool _activeConnection;
-        public event EventHandler ConnectionTimeout;
-        public event EventHandler ConnectionFound;
-        public event EventHandler<ConnectionManagerProgressEventArgs> Progress;
-        private readonly BackgroundWorker _scanThread;
-        private readonly int _challengeCommandId;
-        private readonly int _responseCommandId;
-
-        public bool Connected { get; set; }
+        //private bool _activeConnection;
 
         // The control to invoke the callback on
-        private Control _controlToInvokeOn;
         private readonly object _tryConnectionLock = new object();
         private readonly List<BluetoothDeviceInfo> _deviceList;
         private List<BluetoothDeviceInfo> _prevDeviceList;
-        private long _nextTimeOutCheck;
 
-        public BluetoothConnectionManager(BluetoothTransport bluetoothTransport, CmdMessenger cmdMessenger, int challengeCommandId, int responseCommandId)
+        /// <summary>
+        /// Connection manager for Bluetooth devices
+        /// </summary>
+        public BluetoothConnectionManager(BluetoothTransport bluetoothTransport, CmdMessenger cmdMessenger, int challengeCommandId, int responseCommandId) : 
+            base(cmdMessenger, challengeCommandId,responseCommandId)
         {
+            WatchdogTimeOut = 2000;
+            WatchdogRetryTimeOut = 1000;
+            MaxWatchdogTries = 3;
+
             if (bluetoothTransport == null) return;
             if (cmdMessenger       == null) return;
 
-            _controlToInvokeOn = null;
+            ControlToInvokeOn = null;
             _bluetoothTransport = bluetoothTransport;
-            _cmdMessenger = cmdMessenger;
-            _scanThread = new BackgroundWorker {WorkerSupportsCancellation = true, WorkerReportsProgress = false};
-            _scanThread.DoWork += ScanThreadDoWork;
-            _challengeCommandId = challengeCommandId;
-            _responseCommandId = responseCommandId;
 
             _bluetoothConfiguration = new BluetoothConfiguration();
             ReadSettings();
-            _cmdMessenger.Attach((int)responseCommandId, OnResponseCommandId);
 
             _deviceList = new List<BluetoothDeviceInfo>();
             _prevDeviceList = new List<BluetoothDeviceInfo>();
@@ -89,126 +89,11 @@ namespace CommandMessenger.Bluetooth
             StartConnectionManager();
         }
 
-        /// <summary> Sets a control to invoke on. </summary>
-        /// <param name="controlToInvokeOn"> The control to invoke on. </param>
-        public void SetControlToInvokeOn(Control controlToInvokeOn)
+
+        protected override void DoWorkScan()
         {
-            _controlToInvokeOn = controlToInvokeOn;
-        }
-
-        private void InvokeEvent(EventHandler eventHandler)
-        {
-            try
-            {
-                if (eventHandler == null) return;
-                if (_controlToInvokeOn != null && _controlToInvokeOn.InvokeRequired)
-                {
-                    //Asynchronously call on UI thread
-                    _controlToInvokeOn.BeginInvoke((MethodInvoker)(() => eventHandler(this, null)));
-                    Thread.Yield();
-                }
-                else
-                {
-                    //Directly call
-                    eventHandler(this, null);
-                }
-            }
-            catch (Exception)
-            {
-            }
-        }
-
-        private void InvokeEvent<TEventHandlerArguments>(EventHandler<TEventHandlerArguments> eventHandler, TEventHandlerArguments eventHandlerArguments) where TEventHandlerArguments : EventArgs 
-        {
-            try
-            {
-                if (eventHandler == null) return;
-                if (_controlToInvokeOn.IsDisposed) return;
-                if (_controlToInvokeOn != null && _controlToInvokeOn.InvokeRequired)
-                {
-                    //Asynchronously call on UI thread
-                    _controlToInvokeOn.BeginInvoke((MethodInvoker)(() => eventHandler(this, eventHandlerArguments)));
-                    Thread.Yield();
-                }
-                else
-                {
-                    //Directly call
-                    eventHandler(this, eventHandlerArguments);
-                }
-            }
-            catch (Exception)
-            {
-            }
-        }
-
-        private void Log(int level, string logMessage) 
-        {
-            var args = new ConnectionManagerProgressEventArgs {Level = level, Description = logMessage};
-            InvokeEvent(Progress, args);
-        }
-
-        private void OnResponseCommandId(ReceivedCommand arguments)
-        {            
-            // Do nothing
-        }
-
-        public void StartConnectionManager()
-        {
-            _connectionManagerState = ConnectionManagerStates.Wait;
-            if (_scanThread.IsBusy != true)
-            {
-                // Start the asynchronous operation.
-                _scanType = 0;
-                _scanThread.RunWorkerAsync();
-            }   
-        }
-
-        public void StopConnectionManager()
-        {
-            _connectionManagerState = ConnectionManagerStates.Stop;
-            
-            if (_scanThread.WorkerSupportsCancellation)
-            {
-                // Cancel the asynchronous operation.
-                _scanThread.CancelAsync();
-            }
-            _scanThread.DoWork -= ScanThreadDoWork;
-        }
-
-        private void ScanThreadDoWork(object sender, DoWorkEventArgs e)
-        {
-            
-            while (_connectionManagerState != ConnectionManagerStates.Stop)
-            {
-                // Check if thread is being canceled
-                var worker = sender as BackgroundWorker;
-                if (worker != null && worker.CancellationPending)
-                {
-                    _connectionManagerState = ConnectionManagerStates.Stop;
-                    break;
-                }
-
-                switch (_connectionManagerState)
-                {
-                    case ConnectionManagerStates.Scan:
-                        //Console.WriteLine("BluetoothConnectionManager - scan");
-                        DoWorkScan();
-                        break;
-                    case ConnectionManagerStates.Watchdog:
-                        //Console.WriteLine("BluetoothConnectionManager - watchdog");
-                        DoWorkWatchdog();
-                        break;
-                    default:
-                        Thread.Sleep(1000);
-                        break;
-                }
-            }
-        }
-
-        private void DoWorkScan()
-        {
-            if (Thread.CurrentThread.Name == null) Thread.CurrentThread.Name = "BluetoothConnectionManager - scan";
-            _activeConnection = false;
+            if (Thread.CurrentThread.Name == null) Thread.CurrentThread.Name = "BluetoothConnectionManager";
+            var activeConnection = false;
 
             //if (!_activeConnection)
             {
@@ -216,28 +101,22 @@ namespace CommandMessenger.Bluetooth
                 if (_scanType == 0)
                 {
                     _scanType = 1;
-                    try { _activeConnection = QuickScan(); } catch { }
+                    try { activeConnection = QuickScan(); } catch { }
                 }
                 else if (_scanType == 1)
                 {
                     _scanType = 0;
-                    try { _activeConnection = QuickScan(); } catch { }
+                    try { activeConnection = QuickScan(); } catch { }
                 }
             }
 
             // Trigger event when a connection was made
-            if (_activeConnection)
+            if (activeConnection)
             {
-                _connectionManagerState = ConnectionManagerStates.Wait;
-                InvokeEvent(ConnectionFound);                
+                ConnectionManagerState = ConnectionManagerStates.Wait;
+                ConnectionFoundEvent();
+                                
             } 
-        }
-
-        private void DoWorkWatchdog()
-        {
-            if (Thread.CurrentThread.Name == null) Thread.CurrentThread.Name = "BluetoothConnectionManager - watchdog";
-            try { ConnectionWatchDog(); } catch { }
-            Thread.Sleep(100);
         }
 
         private void QuickScanDevices()
@@ -346,30 +225,7 @@ namespace CommandMessenger.Bluetooth
             }
         }
 
-        public bool ArduinoAvailable(int timeOut)
-        {
-            //Log(3, "Polling Arduino");
-            var challengeCommand = new SendCommand(_challengeCommandId, _responseCommandId, timeOut);
-            var responseCommand = _cmdMessenger.SendCommand(challengeCommand);
-            return responseCommand.Ok;
-        }
 
-        public bool ArduinoAvailable(int timeOut, int tries)
-        {
-            for (var i = 0; i < tries; i++)
-            {
-                Log(3, "Polling Arduino, try # "+i);
-                //Console.WriteLine("Checking if available, try # "+i);
-                if(ArduinoAvailable(timeOut)) return true;
-            }
-            return false;
-        }
-
-        public bool Disconnect()
-        {            
-            Connected = false;
-            return _cmdMessenger.Disconnect();
-        }
 
         // Single scan on foreground thread
         public bool SingleScan()
@@ -484,86 +340,5 @@ namespace CommandMessenger.Bluetooth
                 fileStream.Close();
             }
         }
-
-        public void StartWatchDog(long watchdogTimeOut)
-        {
-            Log(1, "Starting Watchdog");
-            _lastCheckTime = TimeUtils.Millis;
-            _nextTimeOutCheck = _lastCheckTime + WatchdogTimeOut;
-            _watchdogTries = 0;
-            _connectionManagerState = ConnectionManagerStates.Watchdog;
-        }
-
-        public void StopWatchDog()
-        {
-            Log(1, "Stopping Watchdog");
-            _connectionManagerState = ConnectionManagerStates.Wait;
-        }
-
-        public void StopScan()
-        {
-            Log(1, "Stopping device scan");
-            _connectionManagerState = ConnectionManagerStates.Wait;
-        }
-
-        public void StartScan()
-        {
-            Log(1, "Starting device scan");
-            _connectionManagerState = ConnectionManagerStates.Scan;
-        }
-
-        private void ConnectionWatchDog()
-        {          
-            var lastLineTimeStamp = _cmdMessenger.LastReceivedCommandTimeStamp;
-            var currentTimeStamp  = TimeUtils.Millis;
-
-            // If timeout has not elapsed, wait till next watch time
-            if (currentTimeStamp < _nextTimeOutCheck) return;
-            
-            // if a command has been received recently, set next check time
-            if (lastLineTimeStamp > _lastCheckTime) {
-                Log(3, "Successful watchdog response");
-                _lastCheckTime = currentTimeStamp;
-                _nextTimeOutCheck = _lastCheckTime + WatchdogTimeOut;
-                _watchdogTries = 0;
-                return;
-            }
-
-            _lastCheckTime = currentTimeStamp;
-            // Apparently, other side has not reacted in time
-            // If too many tries, notify and stop
-            if (_watchdogTries >= MaxWatchdogTries) 
-            {
-                Log(3, "No watchdog response after final try");
-                _watchdogTries = 0;
-                _connectionManagerState = ConnectionManagerStates.Wait;
-                InvokeEvent(ConnectionTimeout);         
-            }
-
-            // We'll try another time
-            // We queue the command in order to not be intrusive, but put it in front to get a quick answer
-            _cmdMessenger.SendCommand(new SendCommand(_challengeCommandId),SendQueue.InFrontQueue,ReceiveQueue.Default);
-            _watchdogTries++;
-
-            _lastCheckTime = currentTimeStamp;
-            _nextTimeOutCheck = _lastCheckTime + WatchdogRetryTimeOut;
-            Log(3, "No watchdog response, performing try #"+ _watchdogTries);
-        }
-
-        // Dispose 
-        public void Dispose()
-        {
-            Dispose(true);
-        }
-
-        // Dispose
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                StopConnectionManager();                
-            }
-        }
-
     }
 }

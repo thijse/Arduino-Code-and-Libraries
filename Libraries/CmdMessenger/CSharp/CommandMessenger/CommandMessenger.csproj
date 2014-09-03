@@ -46,6 +46,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConnectionManager.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="EventWaiter.cs" />
     <Compile Include="BinaryConverter.cs" />
     <Compile Include="Bluetooth\BluetoothConnectionManager.cs" />
@@ -53,7 +56,6 @@
     <Compile Include="CmdMessenger.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommunicationManager.cs" />
-    <Compile Include="ConnectionManager.cs" />
     <Compile Include="ConnectionManager\IConnectionManager.cs" />
     <Compile Include="ConsoleUtils.cs" />
     <Compile Include="Serialport\SerialConnectionManager.cs" />

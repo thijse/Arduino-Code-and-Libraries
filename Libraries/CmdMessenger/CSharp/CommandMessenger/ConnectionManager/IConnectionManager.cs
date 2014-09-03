@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 
-namespace CommandMessenger.ConnectionManager
+namespace CommandMessenger.ConnectionManager2
 {
     public interface IConnectionManager : IDisposable
     {
